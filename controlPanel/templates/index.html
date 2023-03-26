@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="Control Panel">
+    <title>tinyDragonPrey</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-GLhlTQ8iRABdZLl6O3oVMWSktQOp6b7In1Zl3/Jr59b6EGGoI1aFkw7cmDA6j6gD" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+
+    <script src="./static/controlPanel.js"></script>
+
+  </head>
+  <body class="containter-lg">
+    <div class="row justify-content-center">
+      <div class="col">
+        <div class="d-inline-block form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="print-toggle">
+          <label class="form-check-label" for="print-toggle">print</label>
+        </div>
+      </div>
+      <div class="col">
+        <div class="d-inline-block form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="color-toggle">
+          <label class="form-check-label" for="color-toggle">color</label>
+        </div>
+      </div>
+      <div class="col">
+        <div class="d-inline-block form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="character-toggle">
+          <label class="form-check-label" for="character-toggle">special chars</label>
+        </div>
+      </div>
+    </div>
+    <div class="row justify-content-center">
+      <div class="col">
+        <label for="shift-range" class="form-label">color shift</label>
+        <input type="range" class="form-range" min="0" max="255" step="1" id="shift-range" value="0">
+      </div>
+    </div>
+    <div class="row justify-content-center">
+      <div class="col">
+        <div class="d-inline-block form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="monitor-toggle">
+          <label class="form-check-label" for="monitor-toggle">monitor mode</label>
+        </div>
+      </div>
+      <div class="col">
+        <label for="channel-range" class="form-label">wifi channel</label>
+        <input type="range" class="channel-range" min="1" max="13" step="1" id="channel-range" value="0">
+      </div>
+    </div>
+  </body>
+</html>
