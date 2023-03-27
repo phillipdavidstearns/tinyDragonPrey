@@ -10,12 +10,32 @@
 function initControlPanel(){
 
   document
+    .getElementById('send')
+    .addEventListener('click', async (e) => {
+      var message = document.getElementById('send-message').value
+      var command = {
+        "target" : 0,
+        "command" : "nping_icmp_oneshot",
+        "parameters" : {
+          "message" : message
+        }
+      };
+      await fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+
+  document
     .getElementById('print-toggle')
     .addEventListener('change', async (e) => {
-      var command = { "command" : [{
-        "parameter" : "print",
-        "value" : e.target.checked
-      }]};
+      var command = {
+        "target" : 0,
+        "set" : {
+          "parameter" : "print",
+          "value" : e.target.checked
+        }
+      };
       await fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
@@ -25,10 +45,13 @@ function initControlPanel(){
   document
     .getElementById('color-toggle')
     .addEventListener('change', async (e) => {
-      var command = { "command" : [{
-        "parameter" : "color",
-        "value" : e.target.checked
-      }]};
+      var command = {
+        "target": 0,
+        "set" : {
+          "parameter" : "color",
+          "value" : e.target.checked
+        }
+      };
       await fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
@@ -38,10 +61,13 @@ function initControlPanel(){
   document
     .getElementById('character-toggle')
     .addEventListener('change', async (e) => {
-      var command = { "command" : [{
-        "parameter" : "control_characters",
-        "value" : e.target.checked
-      }]};
+      var command = {
+        "target" : 0,
+        "set" : {
+          "parameter" : "control_characters",
+          "value" : e.target.checked
+        }
+      };
       await fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
@@ -51,11 +77,13 @@ function initControlPanel(){
   document
     .getElementById('shift-range')
     .addEventListener('input', async (e) => {
-      console.log(e.target.value);
-      var command = { "command" : [{
-        "parameter" : "color_shift",
-        "value" : e.target.value
-      }]};
+      var command = {
+        "target" : 0,
+        "set" : {
+          "parameter" : "color_shift",
+          "value" : e.target.value
+        }
+      };
       await fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
@@ -65,10 +93,13 @@ function initControlPanel(){
   document
     .getElementById('monitor-toggle')
     .addEventListener('change', async (e) => {
-      var command = { "command" : [{
-        "parameter" : "wlan1_monitor_mode",
-        "value" : e.target.checked
-      }]};
+      var command = {
+        "target" : 0,
+        "set" : {
+          "parameter" : "wlan1_monitor_mode",
+          "value" : e.target.checked
+        }
+      };
       await fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
@@ -78,11 +109,13 @@ function initControlPanel(){
   document
     .getElementById('channel-range')
     .addEventListener('input', async (e) => {
-      console.log(e.target.value);
-      var command = { "command" : [{
-        "parameter" : "wlan1_channel",
-        "value" : e.target.value
-      }]};
+      var command = {
+        "target" : 0,
+        "set" : {
+          "parameter" : "wlan1_channel",
+          "value" : e.target.value
+        }
+      };
       await fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
