@@ -13,55 +13,658 @@
     <script src="./static/controlPanel.js"></script>
 
   </head>
-  <body class="containter">
-    <div class="row justify-content-center">
-      <div class="col">
-        <div class="d-inline-block form-check form-switch">
-          <input class="form-check-input" type="checkbox" id="print-toggle">
-          <label class="form-check-label" for="print-toggle">print</label>
+  <body>
+    <main>
+      <div class="containter">
+        <div class="row justify-content-center gx-0 m-1 border border-dark border-1 rounded" id="master-panel">
+          <div class="col mx-1  p-3" id="master-settings">
+            <p class='text-center h4'>Master Settings</p>
+            <hr>
+            <div class="row">
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="master-print-toggle">
+                  <label class="form-check-label" for="master-print-toggle">print</label>
+                </div>
+              </div>
+            
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="master-character-toggle">
+                  <label class="form-check-label" for="masater-character-toggle">special chars</label>
+                </div>
+              </div>
+            
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="master-color-toggle">
+                  <label class="form-check-label" for="master-color-toggle">color</label>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label for="master-color-shift-range" class="form-label">color shift</label>
+                <input type="range" class="form-range w-75" min="0" max="255" step="1" id="master-color-shift-range" value="0">
+                <span id="master-color-shift">0</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="master-shift-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="25" max="2500" step="1" id="master-shift-interval-range" value="1000">
+                <span id="master-shift-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="master-shift-interval-toggle">
+                  <label class="form-check-label" for="master-shift-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="master-monitor-toggle">
+                  <label class="form-check-label" for="mastet-monitor-toggle">monitor mode</label>
+                </div>
+              </div>
+              <div class="col">
+                <label for="master-channel-range" class="form-label">wifi channel</label>
+                <input type="range" class="channel-range" min="1" max="13" step="1" id="master-channel-range" value="1">
+                <span id="master-channel">1</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="master-channel-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="25" max="2500" step="1" id="master-channel-interval-range" value="1000">
+                <span id="master-channel-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="master-channel-interval-toggle">
+                  <label class="form-check-label" for="master-channel-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col mx-1 border-dark border-1 border-start border-end p-3" id="master-message">
+            <p class='text-center h4'>Master Message</p>
+            <div class="row justify-content-center">
+              <div class="col">
+                <textarea class="form-control" rows="3" name="message" id="master-message-content" placeholder="Send a message."></textarea>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="master-message-button">send</button>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="master-message-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="master-message-interval-range" value="1000">
+                <span id="master-message-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="master-message-interval-toggle">
+                  <label class="form-check-label" for="master-message-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="master-message-flood-delay-range" class="form-label">delay</label>
+                <input type="range" class="form-range w-50" min="0.001" max="5.0" step="0.001" id="master-message-flood-delay-range" value="1.0">
+                <span id="master-message-flood-delay">1.0</span>
+              </div>
+              <div class="col">
+                <label for="master-message-flood-count-range" class="form-label">count</label>
+                <input type="range" class="form-range w-50" min="1" max="50" id="master-message-flood-count-range" value="10">
+                <span id="master-message-flood-count">10</span>
+              </div>
+            </div>
+            <div class="row justify-content-center text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="master-message-flood-button">flood</button>
+              </div>
+            </div>
+          </div>
+          <div class="col mx-1 p-3" id="master-tone">
+            <p class='text-center h4'>Master Tone</p> 
+            <div class="row justify-content-center text-center">
+              <div class="col">
+                <select class="form-select mb-1" id="master-shape-select" name="master-shape">
+                  <option value="sine">sine</option>
+                  <option value="tri">tri</option>
+                  <option value="square">square</option>
+                  <option value="random" selected>random</option>
+                  <option value="noise">noise</option>
+                </select>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="master-frequency-range" class="form-label">frequency</label>
+                <input type="range" class="form-range w-75" min="10" max="10000" id="master-frequency-range" value="1000">
+                <span id="master-frequency">1000</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="master-duration-range" class="form-label">duration</label>
+                <input type="range" class="form-range w-75" min="2" max="8164" id="master-duration-range" value="500">
+                <span id="master-duration">500</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="master-tone-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="master-tone-interval-range" value="1000">
+                <span id="master-tone-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="master-tone-interval-toggle">
+                  <label class="form-check-label" for="master-tone-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="master-tone-button">beep</button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="col">
-        <div class="d-inline-block form-check form-switch">
-          <input class="form-check-input" type="checkbox" id="color-toggle">
-          <label class="form-check-label" for="color-toggle">color</label>
-        </div>
-      </div>
-      <div class="col">
-        <div class="d-inline-block form-check form-switch">
-          <input class="form-check-input" type="checkbox" id="character-toggle">
-          <label class="form-check-label" for="character-toggle">special chars</label>
-        </div>
-      </div>
-    </div>
-    <div class="row justify-content-center">
-      <div class="col">
-        <label for="shift-range" class="form-label">color shift</label>
-        <input type="range" class="form-range" min="0" max="255" step="1" id="shift-range" value="0">
-      </div>
-    </div>
-    <div class="row justify-content-center">
-      <div class="col">
-        <div class="d-inline-block form-check form-switch">
-          <input class="form-check-input" type="checkbox" id="monitor-toggle">
-          <label class="form-check-label" for="monitor-toggle">monitor mode</label>
-        </div>
-      </div>
-      <div class="col">
-        <label for="channel-range" class="form-label">wifi channel</label>
-        <input type="range" class="channel-range" min="1" max="13" step="1" id="channel-range" value="0">
-      </div>
-    </div>
-    <div class="row justify-content-center">
-      <div class="col">
-        <textarea class="form-control" rows="3" name="message" id="send-message" placeholder="Send a message."></textarea>
-      </div>
-    </div>
-    <div class="row justify-content-center text-center">
-      <div class="col">
-        <button class="btn btn-outline-secondary" id="send">send</button>
-      </div>
-    </div>
+        <div class="row justify-content-center gx-1 my-1" id="individual-panel">
 
+          <!-- PREY 01 CONTROL PANEL -->
+          <div class="col mx-1 border border-dark border-1 rounded p-3" id="prey-01">
+            <p class='text-center h4'>Prey 01</p>
+            <hr>
+            <div class="row">
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey01-print-toggle">
+                  <label class="form-check-label" for="prey01-print-toggle">print</label>
+                </div>
+              </div>
+            
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey01-character-toggle">
+                  <label class="form-check-label" for="masater-character-toggle">special chars</label>
+                </div>
+              </div>
+            
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey01-color-toggle">
+                  <label class="form-check-label" for="prey01-color-toggle">color</label>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label for="prey01-color-shift-range" class="form-label">color shift</label>
+                <input type="range" class="form-range w-75" min="0" max="255" step="1" id="prey01-color-shift-range" value="0">
+                <span id="prey01-color-shift">0</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey01-shift-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="25" max="2500" step="1" id="prey01-shift-interval-range" value="1000">
+                <span id="prey01-shift-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey01-shift-interval-toggle">
+                  <label class="form-check-label" for="prey01-shift-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey01-monitor-toggle">
+                  <label class="form-check-label" for="prey01-monitor-toggle">monitor mode</label>
+                </div>
+              </div>
+              <div class="col">
+                <label for="prey01-channel-range" class="form-label">wifi channel</label>
+                <input type="range" class="channel-range" min="1" max="13" step="1" id="prey01-channel-range" value="1">
+                <span id="prey01-channel">1</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey01-channel-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="25" max="2500" step="1" id="prey01-channel-interval-range" value="1000">
+                <span id="prey01-channel-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey01-channel-interval-toggle">
+                  <label class="form-check-label" for="prey01-channel-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <hr>
+            <div class="row justify-content-center">
+              <div class="col">
+                <textarea class="form-control" rows="3" name="message" id="prey01-message-content" placeholder="Send a message."></textarea>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey01-message-button">send</button>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey01-message-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey01-message-interval-range" value="1000">
+                <span id="prey01-message-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey01-message-interval-toggle">
+                  <label class="form-check-label" for="prey01-message-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey01-message-flood-delay-range" class="form-label">delay</label>
+                <input type="range" class="form-range w-50" min="0.001" max="5.0" step="0.001" id="prey01-message-flood-delay-range" value="1.0">
+                <span id="prey01-message-flood-delay">1.0</span>
+              </div>
+              <div class="col">
+                <label for="prey01-message-flood-count-range" class="form-label">count</label>
+                <input type="range" class="form-range w-50" min="1" max="50" id="prey01-message-flood-count-range" value="10">
+                <span id="prey01-message-flood-count">10</span>
+              </div>
+            </div>
+            <div class="row justify-content-center text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey01-message-flood-button">flood</button>
+              </div>
+            </div>
+            <hr>
+            <div class="row justify-content-center text-center">
+              <div class="col">
+                <select class="form-select mb-1" id="prey01-shape-select" name="prey01-shape">
+                  <option value="sine">sine</option>
+                  <option value="tri">tri</option>
+                  <option value="square">square</option>
+                  <option value="random" selected>random</option>
+                  <option value="noise">noise</option>
+                </select>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey01-frequency-range" class="form-label">frequency</label>
+                <input type="range" class="form-range w-75" min="10" max="10000" id="prey01-frequency-range" value="1000">
+                <span id="prey01-frequency">1000</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey01-duration-range" class="form-label">duration</label>
+                <input type="range" class="form-range w-75" min="2" max="8164" id="prey01-duration-range" value="500">
+                <span id="prey01-duration">500</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey01-tone-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey01-tone-interval-range" value="1000">
+                <span id="prey01-tone-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey01-tone-interval-toggle">
+                  <label class="form-check-label" for="prey01-tone-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey01-tone-button">beep</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PREY 02 CONTROL PANEL -->
+          <div class="col mx-1 border border-dark border-1 rounded p-3" id="prey-02">
+            <p class='text-center h4'>Prey 02</p>
+             <hr>
+            <div class="row">
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey02-print-toggle">
+                  <label class="form-check-label" for="prey02-print-toggle">print</label>
+                </div>
+              </div>
+            
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey02-character-toggle">
+                  <label class="form-check-label" for="masater-character-toggle">special chars</label>
+                </div>
+              </div>
+            
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey02-color-toggle">
+                  <label class="form-check-label" for="prey02-color-toggle">color</label>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label for="prey02-color-shift-range" class="form-label">color shift</label>
+                <input type="range" class="form-range w-75" min="0" max="255" step="1" id="prey02-color-shift-range" value="0">
+                <span id="prey02-color-shift">0</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey02-shift-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="25" max="2500" step="1" id="prey02-shift-interval-range" value="1000">
+                <span id="prey02-shift-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey02-shift-interval-toggle">
+                  <label class="form-check-label" for="prey02-shift-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey02-monitor-toggle">
+                  <label class="form-check-label" for="prey02-monitor-toggle">monitor mode</label>
+                </div>
+              </div>
+              <div class="col">
+                <label for="prey02-channel-range" class="form-label">wifi channel</label>
+                <input type="range" class="channel-range" min="1" max="13" step="1" id="prey02-channel-range" value="1">
+                <span id="prey02-channel">1</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey02-channel-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="25" max="2500" step="1" id="prey02-channel-interval-range" value="1000">
+                <span id="prey02-channel-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey02-channel-interval-toggle">
+                  <label class="form-check-label" for="prey02-channel-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <hr>
+            <div class="row justify-content-center">
+              <div class="col">
+                <textarea class="form-control" rows="3" name="message" id="prey02-message-content" placeholder="Send a message."></textarea>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey02-message-button">send</button>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey02-message-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey02-message-interval-range" value="1000">
+                <span id="prey02-message-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey02-message-interval-toggle">
+                  <label class="form-check-label" for="prey02-message-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey02-message-flood-delay-range" class="form-label">delay</label>
+                <input type="range" class="form-range w-50" min="0.001" max="5.0" step="0.001" id="prey02-message-flood-delay-range" value="1.0">
+                <span id="prey02-message-flood-delay">1.0</span>
+              </div>
+              <div class="col">
+                <label for="prey02-message-flood-count-range" class="form-label">count</label>
+                <input type="range" class="form-range w-50" min="1" max="50" id="prey02-message-flood-count-range" value="10">
+                <span id="prey02-message-flood-count">10</span>
+              </div>
+            </div>
+            <div class="row justify-content-center text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey02-message-flood-button">flood</button>
+              </div>
+            </div>
+            <hr>
+            <div class="row justify-content-center text-center">
+              <div class="col">
+                <select class="form-select mb-1" id="prey02-shape-select" name="prey02-shape">
+                  <option value="sine">sine</option>
+                  <option value="tri">tri</option>
+                  <option value="square">square</option>
+                  <option value="random" selected>random</option>
+                  <option value="noise">noise</option>
+                </select>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey02-frequency-range" class="form-label">frequency</label>
+                <input type="range" class="form-range w-75" min="10" max="10000" id="prey02-frequency-range" value="1000">
+                <span id="prey02-frequency">1000</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey02-duration-range" class="form-label">duration</label>
+                <input type="range" class="form-range w-75" min="2" max="8164" id="prey02-duration-range" value="500">
+                <span id="prey02-duration">500</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey02-tone-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey02-tone-interval-range" value="1000">
+                <span id="prey02-tone-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey02-tone-interval-toggle">
+                  <label class="form-check-label" for="prey02-tone-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey02-tone-button">beep</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- PREY 03 CONTROL PANEL -->
+          <div class="col mx-1 border border-dark border-1 rounded p-3" id="prey-03">
+            <p class='text-center h4'>Prey 03</p>
+            <hr>
+            <div class="row">
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey03-print-toggle">
+                  <label class="form-check-label" for="prey03-print-toggle">print</label>
+                </div>
+              </div>
+            
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey03-character-toggle">
+                  <label class="form-check-label" for="masater-character-toggle">special chars</label>
+                </div>
+              </div>
+            
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey03-color-toggle">
+                  <label class="form-check-label" for="prey03-color-toggle">color</label>
+                </div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col">
+                <label for="prey03-color-shift-range" class="form-label">color shift</label>
+                <input type="range" class="form-range w-75" min="0" max="255" step="1" id="prey03-color-shift-range" value="0">
+                <span id="prey03-color-shift">0</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey03-shift-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="25" max="2500" step="1" id="prey03-shift-interval-range" value="1000">
+                <span id="prey03-shift-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey03-shift-interval-toggle">
+                  <label class="form-check-label" for="prey03-shift-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <hr>
+            <div class="row">
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey03-monitor-toggle">
+                  <label class="form-check-label" for="prey03-monitor-toggle">monitor mode</label>
+                </div>
+              </div>
+              <div class="col">
+                <label for="prey03-channel-range" class="form-label">wifi channel</label>
+                <input type="range" class="channel-range" min="1" max="13" step="1" id="prey03-channel-range" value="1">
+                <span id="prey03-channel">1</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey03-channel-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="25" max="2500" step="1" id="prey03-channel-interval-range" value="1000">
+                <span id="prey03-channel-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey03-channel-interval-toggle">
+                  <label class="form-check-label" for="prey03-channel-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <hr>
+            <div class="row justify-content-center">
+              <div class="col">
+                <textarea class="form-control" rows="3" name="message" id="prey03-message-content" placeholder="Send a message."></textarea>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey03-message-button">send</button>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey03-message-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey03-message-interval-range" value="1000">
+                <span id="prey03-message-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey03-message-interval-toggle">
+                  <label class="form-check-label" for="prey03-message-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey03-message-flood-delay-range" class="form-label">delay</label>
+                <input type="range" class="form-range w-50" min="0.001" max="5.0" step="0.001" id="prey03-message-flood-delay-range" value="1.0">
+                <span id="prey03-message-flood-delay">1.0</span>
+              </div>
+              <div class="col">
+                <label for="prey03-message-flood-count-range" class="form-label">count</label>
+                <input type="range" class="form-range w-50" min="1" max="50" id="prey03-message-flood-count-range" value="10">
+                <span id="prey03-message-flood-count">10</span>
+              </div>
+            </div>
+            <div class="row justify-content-center text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey03-message-flood-button">flood</button>
+              </div>
+            </div>
+            <hr>
+            <div class="row justify-content-center text-center">
+              <div class="col">
+                <select class="form-select mb-1" id="prey03-shape-select" name="prey03-shape">
+                  <option value="sine">sine</option>
+                  <option value="tri">tri</option>
+                  <option value="square">square</option>
+                  <option value="random" selected>random</option>
+                  <option value="noise">noise</option>
+                </select>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey03-frequency-range" class="form-label">frequency</label>
+                <input type="range" class="form-range w-75" min="10" max="10000" id="prey03-frequency-range" value="1000">
+                <span id="prey03-frequency">1000</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey03-duration-range" class="form-label">duration</label>
+                <input type="range" class="form-range w-75" min="2" max="8164" id="prey03-duration-range" value="500">
+                <span id="prey03-duration">500</span>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <label for="prey03-tone-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey03-tone-interval-range" value="1000">
+                <span id="prey03-tone-interval">1000</span>
+              </div>
+              <div class="col">
+                <div class="d-inline-block form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="prey03-tone-interval-toggle">
+                  <label class="form-check-label" for="prey03-tone-interval-toggle">retrigger</label>
+                </div>
+              </div>
+            </div>
+            <div class="row text-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey03-tone-button">beep</button>
+              </div>
+            </div>
+          </div>
+
+
+        </div>
+      </div>
+    </main>
   </body>
 </html>

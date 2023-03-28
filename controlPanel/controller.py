@@ -2,10 +2,10 @@
 
 import os
 import sys
-import random
+from random import random
 import requests
 import subprocess
-
+from math import pi, sin, pow
 from decouple import config
 
 from tornado.web import authenticated, Application, RequestHandler, StaticFileHandler
@@ -18,15 +18,97 @@ import json
 path = os.path.dirname(os.path.abspath(__file__))
 debug = True
 
+# targets = [
+# '10.42.0.120',
+# '10.42.0.121',
+# '10.42.0.122',
+# '10.42.0.123'
+# ]
+
+# for debug purposes >.<
 targets = [
 '10.42.0.120',
-'10.42.0.121',
-'10.42.0.122',
-'10.42.0.123'
+'10.42.0.120',
+'10.42.0.120',
+'10.42.0.120'
 ]
 
 #===========================================================================
-# Listener
+# Utilities
+
+def generateWaveform(frequency=1000, amplitude=1.0, duration=1400, shape="sine", sampleRate=44100, bitDepth=8):
+	# frequency in Hz
+	# amplitude 0.0 - 1.0
+	# duration in samples
+	samples = round(sampleRate/frequency) # length of 1 period
+	waveform = bytearray()
+	if(shape == "sine"):
+		maxAmp = int(pow(2,bitDepth)/2-1)
+		theta = 0.0
+		step = 2*pi/samples
+		for i in range(duration):
+			sample = round(maxAmp*amplitude*sin(theta)+maxAmp)
+			waveform.append(sample)
+			theta+=step
+		return waveform
+	elif(shape == "tri"):
+		maxAmp = int(pow(2,bitDepth)-1)
+		for i in range(duration):
+			sample = round(maxAmp*(1-2*abs(round((i%samples)/samples) - (i%samples)/samples)))
+			waveform.append(sample)
+		return waveform
+	elif(shape == "square"):
+		maxAmp = int(pow(2,bitDepth)-1)
+		for i in range(duration):
+			sample = maxAmp*abs(round((i%samples)/samples))
+			waveform.append(sample)
+		return waveform
+	elif(shape == "noise"):
+		maxAmp = int(pow(2,bitDepth)-1)
+		for i in range(duration):
+			sample = round(maxAmp*random())
+			waveform.append(sample)
+		return waveform
+	elif(shape == "random"):
+		maxAmp = int(pow(2,bitDepth)-1)
+		sample = bytearray()
+		for i in range(samples):
+			sample.append(round(maxAmp*random()))
+		for i in range(duration):
+			waveform.append(sample[i % len(sample)])
+		return waveform
+
+def sendTone(parameters):
+	try:
+		frequency=int(parameters['frequency'])
+		amplitude=float(parameters['amplitude'])
+		duration=int(parameters['duration'])
+		shape=parameters['shape']
+		parameters['message'] = generateWaveform(
+			frequency=frequency,
+			amplitude=amplitude,
+			duration=duration,
+			shape=shape
+		)
+		nping_icmp_oneshot_bytes(parameters)
+	except Exception as e:
+		print('sendTone error:',e)
+
+def nping_icmp_oneshot_bytes(parameters):
+	try:
+		target = parameters['target']
+		message = parameters['message']
+		IOLoop.current().run_in_executor(
+			None,
+			lambda: subprocess.call(
+				["sudo","nping","--icmp",target,"-c","1","--data",message.hex()],
+				stdout=subprocess.DEVNULL,
+				stderr=subprocess.DEVNULL
+			)
+		)
+	except Exception as e:
+		print('nping_icmp_oneshot error:',e)
+
 
 def nping_icmp_oneshot(parameters):
 	try:
@@ -35,7 +117,7 @@ def nping_icmp_oneshot(parameters):
 		IOLoop.current().run_in_executor(
 			None,
 			lambda: subprocess.call(
-				["sudo","nping","--icmp",target,"-c","10","--data-string",message],
+				["sudo","nping","--icmp",target,"-c","1","--data-string",message],
 				stdout=subprocess.DEVNULL,
 				stderr=subprocess.DEVNULL
 			)
@@ -59,6 +141,20 @@ def nping_icmp_flood(parameters):
 		)
 	except Exception as e:
 		print('nping_icmp_flood error:',e)
+
+def nmap_scan(parameters):
+	try:
+		target = parameters['target']
+		IOLoop.current().run_in_executor(
+			None,
+			lambda: subprocess.call(
+				["nmap",target],
+				stdout=subprocess.DEVNULL,
+				stderr=subprocess.DEVNULL
+			)
+		)
+	except Exception as e:
+		print('nmap scan error:',e)
 #===========================================================================
 # Request handlers
 
@@ -90,6 +186,10 @@ class MainHandler(RequestHandler):
 				nping_icmp_oneshot(parameters)
 			elif command == 'nping_icmp_flood':
 				nping_icmp_flood(parameters)
+			elif command == 'tone':
+				sendTone(parameters)
+			elif command == 'scan':
+				nmap_scan(parameters)
 			
 #===========================================================================
 # Executed when run as stand alone
@@ -107,6 +207,7 @@ def make_app():
 
 if __name__ == "__main__":
 	try:
+		generateWaveform()
 		session = requests.session()
 		application = make_app()
 		http_server = HTTPServer(application)
