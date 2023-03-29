@@ -73,6 +73,8 @@ admin   ALL = (ALL) NOPASSWD: ALL, !/bin/su
 
 @includedir /etc/sudoers.d
 ```
+
+1. make sure the new settings check out: `sudo visudo -c`
 1. create a group `tinyDragon`: `sudo groupadd tinyDragon`
 1. set primary group for "user" to "toe": `usermod -g tinyDragon user`
 1. login to `user`: `su user`
@@ -81,6 +83,9 @@ admin   ALL = (ALL) NOPASSWD: ALL, !/bin/su
 	1. select "1 System Options"
 	1. select "S5 Boot / Auto Login"
 	1. select "B2 Console Autologin"
+	1. select "5 Localization Options"
+	1. select "L4 WLAN Country"
+	1. select the appropriate country...
 	1. select "Finish"
 	1. select "No" to continue setup
 1. return to your `me` user: ctrl+d
@@ -89,9 +94,7 @@ admin   ALL = (ALL) NOPASSWD: ALL, !/bin/su
 
 The kiosk will run on Openbox, which uses xServer. Chromium browser will be served in the window and access the Theories of Everything hosted on a local server built on the Tornado Web Framework for Python.
 
-1. `sudo apt-get update && sudo apt-get upgrade -y`
-1. `sudo apt-get install --no-install-recommends xserver-xorg x11-xserver-utils xinit openbox`
-1. `sudo apt-get install python3-tornado python3-pyaudio wireguard`
+`sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install -y wireguard git python3-pyaudio python3-tornado python3-decouple`
 
 ### Disable the splash and console text:
 
@@ -99,7 +102,7 @@ The kiosk will run on Openbox, which uses xServer. Chromium browser will be serv
 1. Enable HDMI hot plug.
 1. Add as the last line: `disable_splash=1`
 1. `sudo nano /boot/cmdline.txt`
-1. Add to the end of the first line: `consoleblank=0 logo.nologo quiet loglevel=0 plymouth.enable=0 vt.global_cursor_default=0 plymouth.ignore-serial-consoles splash fastboot noatime nodiratime noram`
+1. Add to the end of the first line: `consoleblank=0 logo.nologo quiet loglevel=0 plymouth.enable=0  plymouth.ignore-serial-consoles splash fastboot noatime nodiratime noram`
 
 [source](https://ampron.eu/article/tutorial-simplest-way-to-remove-boot-text-on-the-raspberry-pi-based-kiosk-or-digital-signage-display/)
 
@@ -115,6 +118,49 @@ Phillip David Stearns 2023
 
 ```
 
+### Setup Wireguard
+
+1. `cd`
+1. `mkdir .wireguard`
+1. `cd .wiregaurd`
+1. `umask 077`
+1. `wg genkey | tee privatekey | wg pubkey > publickey`
+1. `sudo nano /etc/wireguard/wg0.conf`
+
+1. Create on Client:
+
+```
+[Interface]
+Address = 10.0.0.100/32
+PrivateKey = <client_private_key>
+
+[Peer]
+#Name = <server_name>
+Endpoint = <server_ip>:<listening_port>
+PublicKey = <server_public_key>
+AllowedIPs = 10.0.0.0/24
+PersistentKeepalive = 20
+```
+
+1. Add on Server:
+
+```
+[Peer]
+# Name = tinyDragonPrey-04
+PublicKey = <client_public_key>
+AllowedIPs = 10.0.0.100/32
+PersistentKeepalive = 20
+```
+
+ON SERVER
+
+1. `sudo systemctl restart wg-quick@wg0.service` 
+
+ON CLIENT
+
+1. `sudo systemctl enable wg-quick@wg0.service`
+1. `sudo reboot`
+
 ### Download/Install
 
 1. `git clone`
@@ -127,50 +173,5 @@ Phillip David Stearns 2023
 1. `nano .profile` and add:
 
 ```
-sudo tinyDragonPrey.py
-```
-
-### Setting up the Web Application
-
-A bare-bones web application:
-
-```
-#!/usr/bin/python3
-
-import os
-from tornado.web import Application, RequestHandler
-from tornado.ioloop import IOLoop
-	
-#=======================================================================================
-# TORNADO HANDLERS
-
-class MainHandler(RequestHandler):
-	def get(self):
-		self.render("index.html")
-
-#=======================================================================================
-# TORNADO APPLICATION BUILDER
-
-def make_app():
-	settings = dict(
-		template_path = os.path.join(os.path.dirname(__file__), 'templates'),
-		static_path = os.path.join(os.path.dirname(__file__), 'static'),
-	)
-	urls = [
-		(r'/', MainHandler),
-	]
-	return Application(urls, **settings)
-
-if __name__ == "__main__":
-	try:
-		
-		application = make_app()
-		application.listen(80)
-		main_loop = IOLoop.current()
-		main_loop.start()
-	except Exception as e:
-		print(e)
-	finally:
-		main_loop.stop()
-		exit()
+sudo tinyDragonPrey
 ```

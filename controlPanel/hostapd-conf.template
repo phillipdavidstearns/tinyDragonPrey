@@ -1,0 +1,8 @@
+interface=wlan1
+driver=nl80211
+ssid={ssid}
+hw_mode=g
+channel={channel}
+macaddr_acl=0
+auth_algs=1
+ignore_broadcast_ssid=0

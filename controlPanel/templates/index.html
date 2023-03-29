@@ -105,7 +105,7 @@
             <div class="row text-center">
               <div class="col">
                 <label for="master-message-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="master-message-interval-range" value="1000">
+                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="master-message-interval-range" value="1000">
                 <span id="master-message-interval">1000</span>
               </div>
               <div class="col">
@@ -163,7 +163,7 @@
             <div class="row text-center">
               <div class="col">
                 <label for="master-tone-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="master-tone-interval-range" value="1000">
+                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="master-tone-interval-range" value="1000">
                 <span id="master-tone-interval">1000</span>
               </div>
               <div class="col">
@@ -176,6 +176,60 @@
             <div class="row text-center">
               <div class="col">
                 <button class="btn btn-sm btn-outline-secondary my-1" id="master-tone-button">beep</button>
+              </div>
+            </div>
+            <hr>
+            <div class="row align-items-center justify-content-center text-center">
+              <div class="col-2">
+                <select class="form-select mb-1" id="master-scan-mode-select" name="master-scan-mode">
+                  <option value="-sS">-sS</option>
+                  <option value="-sT" selected>-sT</option>
+                  <option value="-sA">-sA</option>
+                  <option value="-sX">-sX</option>
+                </select>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="master-scan-option-sy">
+                  <label class="form-check-label" for="masater-character-toggle">
+                    sY
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="master-scan-option-sz">
+                  <label class="form-check-label" for="masater-character-toggle">
+                    sZ
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="master-scan-option-sv">
+                  <label class="form-check-label" for="masater-character-toggle">
+                    sV
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="master-scan-option-sc">
+                  <label class="form-check-label" for="masater-character-toggle">
+                    sC
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="master-scan-option-o">
+                  <label class="form-check-label" for="masater-character-toggle">
+                    O
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="master-nmap-button">nmap</button>
               </div>
             </div>
           </div>
@@ -269,7 +323,7 @@
             <div class="row text-center">
               <div class="col">
                 <label for="prey01-message-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey01-message-interval-range" value="1000">
+                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="prey01-message-interval-range" value="1000">
                 <span id="prey01-message-interval">1000</span>
               </div>
               <div class="col">
@@ -325,7 +379,7 @@
             <div class="row text-center">
               <div class="col">
                 <label for="prey01-tone-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey01-tone-interval-range" value="1000">
+                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="prey01-tone-interval-range" value="1000">
                 <span id="prey01-tone-interval">1000</span>
               </div>
               <div class="col">
@@ -429,7 +483,7 @@
             <div class="row text-center">
               <div class="col">
                 <label for="prey02-message-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey02-message-interval-range" value="1000">
+                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="prey02-message-interval-range" value="1000">
                 <span id="prey02-message-interval">1000</span>
               </div>
               <div class="col">
@@ -485,7 +539,7 @@
             <div class="row text-center">
               <div class="col">
                 <label for="prey02-tone-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey02-tone-interval-range" value="1000">
+                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="prey02-tone-interval-range" value="1000">
                 <span id="prey02-tone-interval">1000</span>
               </div>
               <div class="col">
@@ -589,7 +643,7 @@
             <div class="row text-center">
               <div class="col">
                 <label for="prey03-message-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey03-message-interval-range" value="1000">
+                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="prey03-message-interval-range" value="1000">
                 <span id="prey03-message-interval">1000</span>
               </div>
               <div class="col">
@@ -645,7 +699,7 @@
             <div class="row text-center">
               <div class="col">
                 <label for="prey03-tone-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="20" max="2500" step="1" id="prey03-tone-interval-range" value="1000">
+                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="prey03-tone-interval-range" value="1000">
                 <span id="prey03-tone-interval">1000</span>
               </div>
               <div class="col">

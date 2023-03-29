@@ -29,8 +29,8 @@ debug = True
 targets = [
 '10.42.0.120',
 '10.42.0.120',
-'10.42.0.120',
-'10.42.0.120'
+'10.42.0.124',
+'10.42.0.125'
 ]
 
 #===========================================================================
@@ -144,17 +144,45 @@ def nping_icmp_flood(parameters):
 
 def nmap_scan(parameters):
 	try:
-		target = parameters['target']
+		call = ["sudo","nmap"]
+		if 'args' in parameters:
+			for arg in parameters['args']:
+				call.append(arg)
+		call.append(parameters['target'])
 		IOLoop.current().run_in_executor(
 			None,
 			lambda: subprocess.call(
-				["nmap",target],
+				call,
 				stdout=subprocess.DEVNULL,
 				stderr=subprocess.DEVNULL
 			)
 		)
 	except Exception as e:
 		print('nmap scan error:',e)
+
+'''
+
+cool nmap scan variations
+
+ Please choose only one of -sA, -b, -sT, -sF, -sI, -sM, -sN, -sS, -sW, and -sX
+
+Scan Types
+-sS
+-sT
+-sA
+-sX
+
+With Add Ons
+-sY
+-sZ
+-sV
+-sC
+-O
+
+
+
+'''
+
 #===========================================================================
 # Request handlers
 
@@ -168,7 +196,6 @@ class MainHandler(RequestHandler):
 		except Exception as e:
 			print('While parsing request:', e)
 			self.set_status(400)
-
 		if 'set' in request:
 			url = 'http://%s' % targets[request['target']]
 			data = { "set" : request['set'] }

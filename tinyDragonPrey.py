@@ -10,6 +10,7 @@ from threading import Thread
 from time import sleep
 import random
 from decouple import config
+from logging import getLogger
 
 import subprocess
 
@@ -29,6 +30,19 @@ debug = True
 # Until I can figure out a way to tinker with the sockets and set appropriate permissions, this
 # is what requires running the script as root.
 
+# def analysePacket(pkt):
+#   try:
+#     if pkt[26] == 80:
+#       if pkt[63] > 0:
+#         string=""
+#         data = pkt[64:64 + pkt[63]]
+#         for byte in data:
+#           char = chr(byte)
+#           string+=char
+#         # print("SSID: %s\nPKT RAW: %s\nAP MAC: %s" % (string, pkt,pkt[36:42].hex()))
+#   except Exception as e:
+#     pass
+
 class Listener(Thread):
   def __init__(self, interfaces, chunkSize=4096):
     self.interfaces = interfaces
@@ -43,7 +57,7 @@ class Listener(Thread):
     for interface in self.interfaces:
       # etablishes a RAW socket on the given interface, e.g. eth0. meant to only be read.
       s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(0x0003))
-      s.bind((interface, 0))
+      s.bind((interface, 0x0003))
       s.setblocking(False) # non-blocking
       sockets.append(s)
     return sockets
@@ -59,8 +73,11 @@ class Listener(Thread):
     for i in range(len(self.sockets)):
       if(len(self.buffers[i]) < self.chunkSize):
         try: # grab a chunk of data from the socket...
-          data = self.sockets[i].recv(65536)
+          data = self.sockets[i].recv(self.chunkSize)
           if data:
+            # print(len(data))
+            # if self.interfaces[i] == 'wlan1':
+            #   analysePacket(data)
             self.buffers[i] += data # if there's any data there, add it to the buffer
         except: # if there's definitely no data to be read. the socket will throw and exception
           pass
@@ -112,22 +129,24 @@ class Writer(Thread):
     self.control_characters=control_characters
     self.shift = 0
     self.enabled = enabled
-    self.buffers = self.initBuffers() # the so called printQueue
+    self.buffers = []
+    self.initBuffers() # the so called printQueue
     self.chunkSize = chunkSize
     Thread.__init__(self)
 
   def initBuffers(self):
-    buffers = []
+    self.buffers = []
     for i in range(self.qtyChannels):
-      buffers.append(bytearray())
-    return buffers
+      self.buffers.append(bytearray())
+    return self.buffers
 
   def queueForPrinting(self, queueData):
     # since this thread isn't actively grabbing data, it's added here...
-    if len(queueData) != len(self.buffers):
-      raise Exception("[!] len(queueData) != len(self.buffers): ",len(queueData),len(self.buffers))
-    for i in range(len(self.buffers)):
-      self.buffers[i]+=queueData[i]
+    if self.enabled:
+      if len(queueData) != len(self.buffers):
+        raise Exception("[!] len(queueData) != len(self.buffers): ",len(queueData),len(self.buffers))
+      for i in range(len(self.buffers)):
+        self.buffers[i]+=queueData[i]
 
   def printBuffers(self):
     writeFlag = False
@@ -289,13 +308,103 @@ def shutdown():
 
 def setMonitorMode(enable):
   if enable:
-    subprocess.call(["ip","link","set","wlan1","down"])
-    subprocess.call(["iwconfig","wlan1","mode","monitor"])
-    subprocess.call(["ip","link","set","wlan1","up"])
+    subprocess.call(
+      ["ip","link","set","wlan1","down"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+    subprocess.call(
+      ["iwconfig","wlan1","mode","monitor"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+    subprocess.call(
+      ["ip","link","set","wlan1","up"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
   else:
-    subprocess.call(["ip","link","set","wlan1","down"])
-    subprocess.call(["iwconfig","wlan1","mode","managed"])
-    subprocess.call(["ip","link","set","wlan1","up"])
+    subprocess.call(
+      ["ip","link","set","wlan1","down"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+    subprocess.call([
+      "iwconfig","wlan1","mode","managed"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+    subprocess.call(
+      ["ip","link","set","wlan1","up"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+
+def checkWlan1Mode():
+  output = str(subprocess.check_output(["iwconfig","wlan1"]))
+  index = output.find("Mode:")
+  index += len("Mode:")
+  char=""
+  mode=""
+  while char != " ":
+    char = output[index]
+    if char != " ":
+      mode+=char
+    index+=1
+  return mode == "Monitor"
+
+def checkWlan1Channel():
+  output = str(subprocess.check_output(["iwconfig","wlan1"]))
+  output = str(output)
+  index = output.find("Frequency:")
+  index += len("Frequency:")
+  char=""
+  freq=""
+  channel=0
+  
+  while char != " ":
+    char = output[index]
+    if char != " ":
+      freq+=char
+    index+=1
+
+  if freq == "2.412":
+    channel=1
+  elif freq == "2.417":
+    channel=2
+  elif freq == "2.422":
+    channel=3
+  elif freq == "2.427":
+    channel=4
+  elif freq == "2.432":
+    channel=5
+  elif freq == "2.437":
+    channel=6
+  elif freq == "2.442":
+    channel=7
+  elif freq == "2.447":
+    channel=8
+  elif freq == "2.452":
+    channel=9
+  elif freq == "2.457":
+    channel=10
+  elif freq == "2.462":
+    channel=11
+  elif freq == "2.467":
+    channel=12
+  elif freq == "2.472":
+    channel=13
+  elif freq == "2.484":
+    channel=14
+
+  return channel
+
+
+'''
+iw stuff
+
+
+'''
 
 #===========================================================================
 # Request handlers
@@ -303,62 +412,78 @@ def setMonitorMode(enable):
 class MainHandler(RequestHandler):
   async def get(self):
     state={
-      "print":writer.enabled,
-      "color":writer.color,
-      "control_characters":writer.control_characters,
-      "color_shift":writer.shift,
-      "wlan1_monitor_mode":wlan1_monitor_mode,
-      "wlan1_channel":wlan1_channel
+      "print" : writer.enabled,
+      "color" : writer.color,
+      "control_characters" : writer.control_characters,
+      "color_shift" : writer.shift,
+      "wlan1_monitor_mode" : checkWlan1Mode(),
+      "wlan1_channel" : checkWlan1Channel()
     }
     self.write(state)
   async def post(self):
+    command = None
     try:
       command = json.loads(self.request.body.decode('utf-8'))
     except Exception as e:
-      print('While parsing request:', e)
       self.set_status(400)
 
-    if 'set' in command:
-      parameter = command['set']['parameter']
-      value = command['set']['value']
-      if parameter == "print":
-        writer.enabled = value
-      elif parameter == "color":
-        writer.color = value
-      elif parameter == "control_characters":
-        writer.control_characters = value
-      elif parameter == "color_shift":
-        writer.shift = int(value)
-      elif parameter == "wlan1_monitor_mode":
-        wlan1_monitor_mode = value
-        IOLoop.current().add_callback(lambda: setMonitorMode(wlan1_monitor_mode))
-      elif parameter == "wlan1_channel":
-        wlan1_channel = int(value)
-        IOLoop.current().add_callback(
-          lambda: subprocess.call(
-            ["iwconfig","wlan1","channel",str(max(1,min(13,wlan1_channel)))],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+    if command:
+      if 'set' in command:
+        parameter = command['set']['parameter']
+        value = command['set']['value']
+        if parameter == "print":
+          writer.enabled = value
+        elif parameter == "color":
+          writer.color = value
+        elif parameter == "control_characters":
+          writer.control_characters = value
+        elif parameter == "color_shift":
+          writer.shift = int(value)
+        elif parameter == "wlan1_monitor_mode":
+          global wlan1_monitor_mode
+          wlan1_monitor_mode = value
+          await IOLoop.current().run_in_executor(
+            None,
+            lambda: setMonitorMode(wlan1_monitor_mode)
           )
-        )
-    elif 'action' in command:
-      action = command['action']
-      if action == 'shutdown':
-        IOLoop.current().add_callback(
-          lambda: subprocess.call(
-            ["shutdown","-h","now"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+          if wlan1_monitor_mode:
+            await IOLoop.current().run_in_executor(
+              None,
+              lambda: subprocess.call(
+                ["iwconfig","wlan1","channel",str(max(1,min(14,wlan1_channel)))],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+              )
+            )
+        elif parameter == "wlan1_channel":
+          global wlan1_channel
+          wlan1_channel = int(value)
+          await IOLoop.current().run_in_executor(
+            None,
+            lambda: subprocess.call(
+              ["iwconfig","wlan1","channel",str(max(1,min(14,wlan1_channel)))],
+              stdout=subprocess.DEVNULL,
+              stderr=subprocess.DEVNULL
+            )
           )
-        )
-      elif action == 'reboot':
-        IOLoop.current().add_callback(
-          lambda: subprocess.call(
-            ["reboot"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+      elif 'action' in command:
+        action = command['action']
+        if action == 'shutdown':
+          IOLoop.current().add_callback(
+            lambda: subprocess.call(
+              ["shutdown","-h","now"],
+              stdout=subprocess.DEVNULL,
+              stderr=subprocess.DEVNULL
+            )
           )
-        )
+        elif action == 'reboot':
+          IOLoop.current().add_callback(
+            lambda: subprocess.call(
+              ["reboot"],
+              stdout=subprocess.DEVNULL,
+              stderr=subprocess.DEVNULL
+            )
+          )
 #===========================================================================
 # Executed when run as stand alone
 
@@ -375,7 +500,6 @@ def make_app():
 
 if __name__ == "__main__":
   try:
-    print("TEST")
     # check to see if user is root
     if os.getuid() != 0:
       print("Must be run as root!")
@@ -398,8 +522,8 @@ if __name__ == "__main__":
     COLOR = config('COLOR') == "True"
     CONTROL_CHARACTERS = config('CONTROL_CHARACTERS') == "True"
 
-    wlan1_monitor_mode = False
-    wlan1_channel = 0
+    wlan1_monitor_mode = checkWlan1Mode()
+    wlan1_channel = checkWlan1Channel()
 
     print("INTERFACES: ", interfaces)
     print("CHANNELS: ", CHANNELS)
@@ -431,11 +555,11 @@ if __name__ == "__main__":
       print('Error starting audifiers:',e)
 
     # run the main loop
-
+    getLogger('tornado.access').disabled = True
     application = make_app()
     http_server = HTTPServer(application)
     http_server.listen(80)
     main_loop = IOLoop.current()
     main_loop.start()
   except Exception as e:
-    print('Ooops! Exception caught:',e)
+    print('Ooops!',e)

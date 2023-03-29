@@ -57,7 +57,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -72,7 +72,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -87,7 +87,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -120,7 +120,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -135,7 +135,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -150,7 +150,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -183,7 +183,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -198,7 +198,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -213,7 +213,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -250,7 +250,7 @@ function initControlPanel(){
           "value" : e.target.value
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -266,7 +266,7 @@ function initControlPanel(){
           "value" : e.target.value
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -282,7 +282,7 @@ function initControlPanel(){
           "value" : e.target.value
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -373,7 +373,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -388,7 +388,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -403,7 +403,7 @@ function initControlPanel(){
           "value" : e.target.checked
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -432,13 +432,13 @@ function initControlPanel(){
     .addEventListener('input', async (e) => {
       document.getElementById('prey01-channel').textContent=e.target.value;
       var command = {
-        "target" : 0,
+        "target" : 1,
         "set" : {
           "parameter" : "wlan1_channel",
           "value" : e.target.value
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -448,13 +448,13 @@ function initControlPanel(){
     .addEventListener('input', async (e) => {
       document.getElementById('prey02-channel').textContent=e.target.value;
       var command = {
-        "target" : 0,
+        "target" : 2,
         "set" : {
           "parameter" : "wlan1_channel",
           "value" : e.target.value
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -464,13 +464,13 @@ function initControlPanel(){
     .addEventListener('input', async (e) => {
       document.getElementById('prey03-channel').textContent=e.target.value;
       var command = {
-        "target" : 0,
+        "target" : 3,
         "set" : {
           "parameter" : "wlan1_channel",
           "value" : e.target.value
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -547,7 +547,7 @@ function initControlPanel(){
             "message" : message
           }
         };
-        await fetch('/', {
+        fetch('/', {
           method: "POST",
           body: JSON.stringify(command)
         });
@@ -566,7 +566,7 @@ function initControlPanel(){
           "message" : message
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -582,7 +582,7 @@ function initControlPanel(){
           "message" : message
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -598,7 +598,7 @@ function initControlPanel(){
           "message" : message
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -690,7 +690,7 @@ function initControlPanel(){
             "count" : count
           }
         };
-        await fetch('/', {
+        fetch('/', {
           method: "POST",
           body: JSON.stringify(command)
         });
@@ -723,7 +723,7 @@ function initControlPanel(){
           "count" : count
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -754,7 +754,7 @@ function initControlPanel(){
           "count" : count
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -785,7 +785,7 @@ function initControlPanel(){
           "count" : count
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -820,7 +820,7 @@ function initControlPanel(){
             "shape":shape
           }
         };
-        await fetch('/', {
+        fetch('/', {
           method: "POST",
           body: JSON.stringify(command)
         });
@@ -867,7 +867,7 @@ function initControlPanel(){
           "shape":shape
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -912,7 +912,7 @@ function initControlPanel(){
           "shape":shape
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -957,7 +957,7 @@ function initControlPanel(){
           "shape":shape
         }
       };
-      await fetch('/', {
+      fetch('/', {
         method: "POST",
         body: JSON.stringify(command)
       });
@@ -969,10 +969,48 @@ function initControlPanel(){
     });
   document
     .getElementById('prey03-tone-interval-toggle')
-    .addEventListener('change', async (e) => {
+    .addEventListener('change',(e) => {
       prey03ToneIntervalEnabled = document.getElementById('prey03-tone-interval-toggle').checked;
       if(prey03ToneIntervalEnabled){
         prey03ToneInterval();
+      }
+    });
+
+  // MASTER NMAP
+  document
+    .getElementById('master-nmap-button')
+    .addEventListener('click', async (e) => {
+      var parameters = [];
+      
+      parameters.push(document.getElementById('master-scan-mode-select').value);
+      
+      if (document.getElementById('master-scan-option-sc').checked){
+        parameters.push("-sC");
+      }
+      if (document.getElementById('master-scan-option-sv').checked){
+        parameters.push("-sV");
+      }
+      if (document.getElementById('master-scan-option-sy').checked){
+        parameters.push("-sY");
+      }
+      if (document.getElementById('master-scan-option-sz').checked){
+        parameters.push("-sZ");
+      }
+      if (document.getElementById('master-scan-option-o').checked){
+        parameters.push("-O");
+      }
+      for (var i = 0; i < 3 ; i++){
+        var command = {
+          "target" : i+1,
+          "command" : "scan",
+          "parameters" : {
+            "args": parameters
+          }
+        };
+        fetch('/', {
+          method: "POST",
+          body: JSON.stringify(command)
+        });
       }
     });
 
