@@ -1,4 +1,72 @@
-# tinyDragonPrey Setup for NOT.GLI.TC/H 2023
+# tinyDragonPrey for NOT.GLI.TC/H 2023
+
+## What's going on here?
+
+1. Nothing
+2. It's complicated...
+3. OK... So, here's everything you "need" to know:
+
+### Here Be Dragons
+
+> ["Here Be Dragons"](https://phillipstearns.com/artwork#/here-be-dragons/) is a real-time sound piece that converts malicious intrusion attempts on internet-connected devices into an immersive soundscape.
+ 
+In the fall of 2018, I started discussing with [Sporobole](https://sporobole.org/) director, Éric Desmarais, the possibility of producing a sound installation for EspaceImMedia (EIM) 2019 / LISTENING ANGLES: SOUND PIECES IN PUBLIC SPACE. In July of 2019, I was invited to produce Here Be Dragons as an artist in residence at Sporobole.
+
+The concept for the piece was broadly aimed at translating cyber warfare into the sensorial sphere of human perception. Cyber warfare has several key aspects, one of which is leveraging software flaws on networked systems. So much of the infrastructure and by extension the activity on modern communication networks and networked information systems is silent, and invisible. How then do we access this activity and develop sensibilities beyond abstract conceptual awareness?
+
+Imagine that you cannot see. You are in an unfamiliar forest. Once the disorientation and panic subside, how do you become attuned to your environment? What sensibilities and ways of knowing through your ears emerge? Can you learn to identify changes in weather based on the subtle changes to the songs of the forest?
+
+Here Be Dragons involved three core elements:
+
+1. Remote [Honeypot](https://en.wikipedia.org/wiki/Honeypot_(computing)) Servers
+2. A VPN
+3. Raspberry Pis running software to translate network packets into audio.
+
+### tinyDragons
+
+Here Be Dragons used 8 Raspberry Pis to convert into sound the malicious network traffic of 15 honeypot servers deployed globally. Opportunities to present the work in different contexts with fewer speakers or on headphones came up. The Raspberry Pis then became my dragons.
+
+### packet2audio
+
+The software translating the traffic to audio is [packet2audio](https://github.com/phillipdavidstearns/packet2audio). It's gone through several revisions and is due for another update, but the principle is simple:
+
+Open a raw socket, grab available packets as they are available and feed them into an audio stream buffer.
+
+So any network interface that can be opened as a raw socket can be hooked up to the audio interface, including wireless adapters!
+
+### SYN/ACK 
+
+While developing the software for Here Be Dragons, I started rehearsing with the system locally for live performances. The first of these was for [NØ SCHOOL NEVERS](https://noschoolnevers.com/2019.html). Subsequent performances were given at [CULTUREHUB's Indeterminate Forms](https://www.culturehub.org/events/indeterminate-forms) and [Radical/Networks 2019](https://radicalnetworks.org/archives/2019/).
+
+### tinyDragonPrey
+
+Is the next evolution of the tinyDragons and a continuation of the performance SYN/ACK. It has been developed especially for [NOT.GLI.TC/H](https://not.gli.tc/h/) @ [TRITRIANGLE](https://tritriangle.net/events/event/not-gli-tc-h/).
+
+The familiar dragons are now running tinyDragonPrey, which includes a web server that incorporates and provides some interactivity with an updated version of packet2audio.
+
+In previous performances of SYN/ACK, port scans, vulnerability exploits, and brute force login attempts were performed from my laptop, using tools and frameworks like Metasploit directly from the command line, with only a handful of rudimentary scripts at my disposal. I would also place the tinyDragons into monitor mode and audify the ambient wifi traffic.
+
+Part of developing tinyDragonPrey, was to create a more performance friendly interface to control the timing and nature of the attacks as well as interface with the settings for each of the tinyDragons. controlPanel.py fires up a lightweight web server that hosts the interface (HTML5+Bootstrap/CSS+JS) and passes commands to the remote dragons. Some of the controls include:
+
+**On the tinyDragon:**
+
+* enabling/disabling wifi interface monitor mode
+* setting wifi interface channel
+* enabling/disabling printing packets to the console
+* enabling/disabling colorizing the background of printed characters based on the byte value represented
+* setting an offset value for that background color
+* deploying a rogue access point using SSIDs sniffed from probe requests while in monitor mode
+
+**On the tinyDragon:**
+
+* one-shot and flood ICMP pings with `nping` and custom message or waveform payloads
+* launching several different flavors of `nmap` scans
+
+Any other vulnerability scanning and exploitation will happen from the command line via metasploit, etc.
+
+---
+
+# The Recipe
 
 ## Resources:
 
@@ -221,7 +289,7 @@ dhcp-authoritative
 ```
 country_code=US
 interface=wlan1
-driver=nl80211
+driver=nl80211sduo
 ieee80211n=1
 wmm_enabled=0
 ssid=tinyDragonPrey

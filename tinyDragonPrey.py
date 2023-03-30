@@ -340,7 +340,28 @@ def shutdown():
 
 #===========================================================================
 
+def startRogueAP(parameters):
+  # disable monitor mode
+  if wlan1_monitor_mode:
+    setMonitorMode(False)
+  # write new config from parameters
+  subprocess.call(
+    ["systemctl","start","hostapd"],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL
+  )
+
+def stopRogueAP():
+  subprocess.call(
+    ["systemctl","stop","hostapd"],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL
+  )
+  if wlan1_monitor_mode:
+    setMonitorMode(True)
+
 def setMonitorMode(enable):
+
   if enable:
     subprocess.call(
       ["ip","link","set","wlan1","down"],
@@ -503,7 +524,8 @@ class MainHandler(RequestHandler):
       elif 'action' in command:
         action = command['action']
         if action == 'shutdown':
-          IOLoop.current().add_callback(
+          IOLoop.current().run_in_executor(
+            None,
             lambda: subprocess.call(
               ["shutdown","-h","now"],
               stdout=subprocess.DEVNULL,
@@ -511,13 +533,25 @@ class MainHandler(RequestHandler):
             )
           )
         elif action == 'reboot':
-          IOLoop.current().add_callback(
+          IOLoop.current().run_in_executor(
+            None,
             lambda: subprocess.call(
               ["reboot"],
               stdout=subprocess.DEVNULL,
               stderr=subprocess.DEVNULL
             )
           )
+        elif action == 'start_spoof':
+          IOLoop.current().run_in_executor(
+            None,
+            lambda: startRogueAP(command['parameters'])
+          )
+        elif action == 'stop_spoof':
+          IOLoop.current().run_in_executor(
+            None,
+            lambda: stopRogueAP()
+          )
+
 #===========================================================================
 # Executed when run as stand alone
 

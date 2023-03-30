@@ -3,28 +3,53 @@ var masterMessageIntervalEnabled;
 var masterChannelIntervalEnabled;
 var masterShiftIntervalEnabled;
 
-var prey01ToneIntervalEnabled;
-var prey01MessageIntervalEnabled;
-var prey01ChannelIntervalEnabled;
-var prey01ShiftIntervalEnabled;
+var prey0ToneIntervalEnabled;
+var prey0MessageIntervalEnabled;
+var prey0ChannelIntervalEnabled;
+var prey0ShiftIntervalEnabled;
 
-var prey02ToneIntervalEnabled;
-var prey02MessageIntervalEnabled;
-var prey02ChannelIntervalEnabled;
-var prey02ShiftIntervalEnabled;
+var prey1ToneIntervalEnabled;
+var prey1MessageIntervalEnabled;
+var prey1ChannelIntervalEnabled;
+var prey1ShiftIntervalEnabled;
 
-var prey03ToneIntervalEnabled;
-var prey03MessageIntervalEnabled;
-var prey03ChannelIntervalEnabled;
-var prey03ShiftIntervalEnabled;
+var prey2ToneIntervalEnabled;
+var prey2MessageIntervalEnabled;
+var prey2ChannelIntervalEnabled;
+var prey2ShiftIntervalEnabled;
 
+var states;
 
 (function() {
   'use strict';
   window.addEventListener('load', async function() {
+    states = await fetchStates();
     initControlPanel();
   }, false);
 })();
+
+async function fetchStates(){
+  var response = await fetch('/?action=get_states',{method:"POST"})
+  var { states } = await response.json();
+  for(var i = 0 ; i < states.length ; i++){
+    if (states[i].online){
+      document.getElementById(`prey${i}-print-toggle`).checked = states[i].print;
+      document.getElementById(`prey${i}-color-toggle`).checked = states[i].color;
+      document.getElementById(`prey${i}-character-toggle`).checked = states[i].control_characters;
+      document.getElementById(`prey${i}-color-shift-range`).value = states[i].color_shift;
+      document.getElementById(`prey${i}-color-shift`).textContent = states[i].color_shift;
+      document.getElementById(`prey${i}-monitor-toggle`).checked = states[i].wlan1_monitor_mode;
+      document.getElementById(`prey${i}-channel-range`).value = states[i].wlan1_channel;
+      document.getElementById(`prey${i}-channel`).textContent = states[i].wlan1_channel;
+      document.getElementById(`prey${i}-title`).textContent = states[i].ip;
+    } else {
+      document.getElementById(`prey${i}-title`).textContent = "unreachable";
+    }
+    
+  }
+  return states;
+}
+
 
 function initControlPanel(){
 
@@ -35,20 +60,35 @@ function initControlPanel(){
     .getElementById('master-print-toggle')
     .addEventListener('change', async (e) => {
       var toggle;
-      toggle = document.getElementById('prey01-print-toggle');
+      toggle = document.getElementById('prey0-print-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
-      toggle = document.getElementById('prey02-print-toggle');
+      toggle = document.getElementById('prey1-print-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
-      toggle = document.getElementById('prey03-print-toggle');
+      toggle = document.getElementById('prey2-print-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
     });
 
   //PREY PRINT
   document
-    .getElementById('prey01-print-toggle')
+    .getElementById('prey0-print-toggle')
+    .addEventListener('change', async (e) => {
+      var command = {
+        "target" : 0,
+        "set" : {
+          "parameter" : "print",
+          "value" : e.target.checked
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+  document
+    .getElementById('prey1-print-toggle')
     .addEventListener('change', async (e) => {
       var command = {
         "target" : 1,
@@ -63,25 +103,10 @@ function initControlPanel(){
       });
     });
   document
-    .getElementById('prey02-print-toggle')
+    .getElementById('prey2-print-toggle')
     .addEventListener('change', async (e) => {
       var command = {
         "target" : 2,
-        "set" : {
-          "parameter" : "print",
-          "value" : e.target.checked
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
-    });
-  document
-    .getElementById('prey03-print-toggle')
-    .addEventListener('change', async (e) => {
-      var command = {
-        "target" : 3,
         "set" : {
           "parameter" : "print",
           "value" : e.target.checked
@@ -98,20 +123,35 @@ function initControlPanel(){
     .getElementById('master-color-toggle')
     .addEventListener('change', async (e) => {
       var toggle;
-      toggle = document.getElementById('prey01-color-toggle');
+      toggle = document.getElementById('prey0-color-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
-      toggle = document.getElementById('prey02-color-toggle');
+      toggle = document.getElementById('prey1-color-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
-      toggle = document.getElementById('prey03-color-toggle');
+      toggle = document.getElementById('prey2-color-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
     });
 
   //PREY COLOR
   document
-    .getElementById('prey01-color-toggle')
+    .getElementById('prey0-color-toggle')
+    .addEventListener('change', async (e) => {
+      var command = {
+        "target": 0,
+        "set" : {
+          "parameter" : "color",
+          "value" : e.target.checked
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+  document
+    .getElementById('prey1-color-toggle')
     .addEventListener('change', async (e) => {
       var command = {
         "target": 1,
@@ -126,25 +166,10 @@ function initControlPanel(){
       });
     });
   document
-    .getElementById('prey02-color-toggle')
+    .getElementById('prey2-color-toggle')
     .addEventListener('change', async (e) => {
       var command = {
         "target": 2,
-        "set" : {
-          "parameter" : "color",
-          "value" : e.target.checked
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
-    });
-  document
-    .getElementById('prey03-color-toggle')
-    .addEventListener('change', async (e) => {
-      var command = {
-        "target": 3,
         "set" : {
           "parameter" : "color",
           "value" : e.target.checked
@@ -161,20 +186,35 @@ function initControlPanel(){
     .getElementById('master-character-toggle')
     .addEventListener('change', async (e) => {
       var toggle;
-      toggle = document.getElementById('prey01-character-toggle');
+      toggle = document.getElementById('prey0-character-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
-      toggle = document.getElementById('prey02-character-toggle');
+      toggle = document.getElementById('prey1-character-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
-      toggle = document.getElementById('prey03-character-toggle');
+      toggle = document.getElementById('prey2-character-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
     });
 
   //PREY SPECIAL CHARACTERS
   document
-    .getElementById('prey01-character-toggle')
+    .getElementById('prey0-character-toggle')
+    .addEventListener('change', async (e) => {
+      var command = {
+        "target" : 0,
+        "set" : {
+          "parameter" : "control_characters",
+          "value" : e.target.checked
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+  document
+    .getElementById('prey1-character-toggle')
     .addEventListener('change', async (e) => {
       var command = {
         "target" : 1,
@@ -189,25 +229,10 @@ function initControlPanel(){
       });
     });
   document
-    .getElementById('prey02-character-toggle')
+    .getElementById('prey2-character-toggle')
     .addEventListener('change', async (e) => {
       var command = {
         "target" : 2,
-        "set" : {
-          "parameter" : "control_characters",
-          "value" : e.target.checked
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
-    });
-  document
-    .getElementById('prey03-character-toggle')
-    .addEventListener('change', async (e) => {
-      var command = {
-        "target" : 3,
         "set" : {
           "parameter" : "control_characters",
           "value" : e.target.checked
@@ -226,13 +251,13 @@ function initControlPanel(){
       document.getElementById('master-color-shift').textContent=e.target.value;
       
       var range;
-      range = document.getElementById('prey01-color-shift-range')
+      range = document.getElementById('prey0-color-shift-range')
       range.value = e.target.value;
       range.dispatchEvent(new Event('input'));
-      range = document.getElementById('prey02-color-shift-range')
+      range = document.getElementById('prey1-color-shift-range')
       range.value = e.target.value;
       range.dispatchEvent(new Event('input'));
-      range = document.getElementById('prey03-color-shift-range')
+      range = document.getElementById('prey2-color-shift-range')
       range.value = e.target.value;
       range.dispatchEvent(new Event('input'));
       
@@ -240,9 +265,25 @@ function initControlPanel(){
 
   //PREY COLOR SHIFT
   document
-    .getElementById('prey01-color-shift-range')
+    .getElementById('prey0-color-shift-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey01-color-shift').textContent=e.target.value;
+      document.getElementById('prey0-color-shift').textContent=e.target.value;
+      var command = {
+        "target" : 0,
+        "set" : {
+          "parameter" : "color_shift",
+          "value" : e.target.value
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+  document
+    .getElementById('prey1-color-shift-range')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey1-color-shift').textContent=e.target.value;
       var command = {
         "target" : 1,
         "set" : {
@@ -256,27 +297,11 @@ function initControlPanel(){
       });
     });
   document
-    .getElementById('prey02-color-shift-range')
+    .getElementById('prey2-color-shift-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey02-color-shift').textContent=e.target.value;
+      document.getElementById('prey1-color-shift').textContent=e.target.value;
       var command = {
         "target" : 2,
-        "set" : {
-          "parameter" : "color_shift",
-          "value" : e.target.value
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
-    });
-  document
-    .getElementById('prey03-color-shift-range')
-    .addEventListener('input', async (e) => {
-      document.getElementById('prey02-color-shift').textContent=e.target.value;
-      var command = {
-        "target" : 3,
         "set" : {
           "parameter" : "color_shift",
           "value" : e.target.value
@@ -305,44 +330,44 @@ function initControlPanel(){
 
   //PREY COLOR SHIFT INTERVALS
   document
-    .getElementById('prey01-shift-interval-range')
+    .getElementById('prey0-shift-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey01-shift-interval').textContent=e.target.value;
+      document.getElementById('prey0-shift-interval').textContent=e.target.value;
     });
   document
-    .getElementById('prey01-shift-interval-toggle')
+    .getElementById('prey0-shift-interval-toggle')
     .addEventListener('change', async (e) => {
-      prey01ShiftIntervalEnabled = document.getElementById('prey01-shift-interval-toggle').checked;
-      if(prey01ShiftIntervalEnabled){
-        prey01ShiftInterval();
+      prey0ShiftIntervalEnabled = document.getElementById('prey0-shift-interval-toggle').checked;
+      if(prey0ShiftIntervalEnabled){
+        prey0ShiftInterval();
       }
     });
 
   document
-    .getElementById('prey02-shift-interval-range')
+    .getElementById('prey1-shift-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey02-shift-interval').textContent=e.target.value;
+      document.getElementById('prey1-shift-interval').textContent=e.target.value;
     });
   document
-    .getElementById('prey02-shift-interval-toggle')
+    .getElementById('prey1-shift-interval-toggle')
     .addEventListener('change', async (e) => {
-      prey02ShiftIntervalEnabled = document.getElementById('prey02-shift-interval-toggle').checked;
-      if(prey02ShiftIntervalEnabled){
-        prey02ShiftInterval();
+      prey1ShiftIntervalEnabled = document.getElementById('prey1-shift-interval-toggle').checked;
+      if(prey1ShiftIntervalEnabled){
+        prey1ShiftInterval();
       }
     });
 
   document
-    .getElementById('prey03-shift-interval-range')
+    .getElementById('prey2-shift-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey03-shift-interval').textContent=e.target.value;
+      document.getElementById('prey2-shift-interval').textContent=e.target.value;
     });
   document
-    .getElementById('prey03-shift-interval-toggle')
+    .getElementById('prey2-shift-interval-toggle')
     .addEventListener('change', async (e) => {
-      prey03ShiftIntervalEnabled = document.getElementById('prey03-shift-interval-toggle').checked;
-      if(prey03ShiftIntervalEnabled){
-        prey03ShiftInterval();
+      prey2ShiftIntervalEnabled = document.getElementById('prey2-shift-interval-toggle').checked;
+      if(prey2ShiftIntervalEnabled){
+        prey2ShiftInterval();
       }
     });
 
@@ -351,20 +376,35 @@ function initControlPanel(){
     .getElementById('master-monitor-toggle')
     .addEventListener('change', async (e) => {
       var toggle;
-      toggle = document.getElementById('prey01-monitor-toggle');
+      toggle = document.getElementById('prey0-monitor-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
-      toggle = document.getElementById('prey02-monitor-toggle');
+      toggle = document.getElementById('prey1-monitor-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
-      toggle = document.getElementById('prey03-monitor-toggle');
+      toggle = document.getElementById('prey2-monitor-toggle');
       toggle.checked = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
     });
 
   //PREY MONITOR MODE TOGGLES
   document
-    .getElementById('prey01-monitor-toggle')
+    .getElementById('prey0-monitor-toggle')
+    .addEventListener('change', async (e) => {
+      var command = {
+        "target" : 0,
+        "set" : {
+          "parameter" : "wlan1_monitor_mode",
+          "value" : e.target.checked
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+  document
+    .getElementById('prey1-monitor-toggle')
     .addEventListener('change', async (e) => {
       var command = {
         "target" : 1,
@@ -379,25 +419,10 @@ function initControlPanel(){
       });
     });
   document
-    .getElementById('prey02-monitor-toggle')
+    .getElementById('prey2-monitor-toggle')
     .addEventListener('change', async (e) => {
       var command = {
         "target" : 2,
-        "set" : {
-          "parameter" : "wlan1_monitor_mode",
-          "value" : e.target.checked
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
-    });
-  document
-    .getElementById('prey03-monitor-toggle')
-    .addEventListener('change', async (e) => {
-      var command = {
-        "target" : 3,
         "set" : {
           "parameter" : "wlan1_monitor_mode",
           "value" : e.target.checked
@@ -415,22 +440,38 @@ function initControlPanel(){
     .addEventListener('input', async (e) => {
       document.getElementById('master-channel').textContent=e.target.value;
       var range;
-      range = document.getElementById('prey01-channel-range');
+      range = document.getElementById('prey0-channel-range');
       range.value = e.target.value;
       range.dispatchEvent(new Event('input'));
-      range = document.getElementById('prey02-channel-range');
+      range = document.getElementById('prey1-channel-range');
       range.value = e.target.value;
       range.dispatchEvent(new Event('input'));
-      range = document.getElementById('prey03-channel-range');
+      range = document.getElementById('prey2-channel-range');
       range.value = e.target.value;
       range.dispatchEvent(new Event('input'));
     });
 
   //PREY WLAN1 CHANNEL RANGE
   document
-    .getElementById('prey01-channel-range')
+    .getElementById('prey0-channel-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey01-channel').textContent=e.target.value;
+      document.getElementById('prey0-channel').textContent=e.target.value;
+      var command = {
+        "target" : 0,
+        "set" : {
+          "parameter" : "wlan1_channel",
+          "value" : e.target.value
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+  document
+    .getElementById('prey1-channel-range')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey1-channel').textContent=e.target.value;
       var command = {
         "target" : 1,
         "set" : {
@@ -444,27 +485,11 @@ function initControlPanel(){
       });
     });
   document
-    .getElementById('prey02-channel-range')
+    .getElementById('prey2-channel-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey02-channel').textContent=e.target.value;
+      document.getElementById('prey2-channel').textContent=e.target.value;
       var command = {
         "target" : 2,
-        "set" : {
-          "parameter" : "wlan1_channel",
-          "value" : e.target.value
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
-    });
-  document
-    .getElementById('prey03-channel-range')
-    .addEventListener('input', async (e) => {
-      document.getElementById('prey03-channel').textContent=e.target.value;
-      var command = {
-        "target" : 3,
         "set" : {
           "parameter" : "wlan1_channel",
           "value" : e.target.value
@@ -493,44 +518,44 @@ function initControlPanel(){
 
   //PREY WLAN1 CHANNEL INTERVALS
   document
-    .getElementById('prey01-channel-interval-range')
+    .getElementById('prey0-channel-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey01-channel-interval').textContent=e.target.value;
+      document.getElementById('prey0-channel-interval').textContent=e.target.value;
     });
   document
-    .getElementById('prey01-channel-interval-toggle')
+    .getElementById('prey0-channel-interval-toggle')
     .addEventListener('change', async (e) => {
-      prey01ChannelIntervalEnabled = document.getElementById('prey01-channel-interval-toggle').checked;
-      if(prey01ChannelIntervalEnabled){
-        prey01ChannelInterval();
+      prey0ChannelIntervalEnabled = document.getElementById('prey0-channel-interval-toggle').checked;
+      if(prey0ChannelIntervalEnabled){
+        prey0ChannelInterval();
       }
     });
 
   document
-    .getElementById('prey02-channel-interval-range')
+    .getElementById('prey1-channel-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey02-channel-interval').textContent=e.target.value;
+      document.getElementById('prey1-channel-interval').textContent=e.target.value;
     });
   document
-    .getElementById('prey02-channel-interval-toggle')
+    .getElementById('prey1-channel-interval-toggle')
     .addEventListener('change', async (e) => {
-      prey02ChannelIntervalEnabled = document.getElementById('prey02-channel-interval-toggle').checked;
-      if(prey02ChannelIntervalEnabled){
-        prey02ChannelInterval();
+      prey1ChannelIntervalEnabled = document.getElementById('prey1-channel-interval-toggle').checked;
+      if(prey1ChannelIntervalEnabled){
+        prey1ChannelInterval();
       }
     });
 
   document
-    .getElementById('prey03-channel-interval-range')
+    .getElementById('prey2-channel-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey03-channel-interval').textContent=e.target.value;
+      document.getElementById('prey2-channel-interval').textContent=e.target.value;
     });
   document
-    .getElementById('prey03-channel-interval-toggle')
+    .getElementById('prey2-channel-interval-toggle')
     .addEventListener('change', async (e) => {
-      prey03ChannelIntervalEnabled = document.getElementById('prey03-channel-interval-toggle').checked;
-      if(prey03ChannelIntervalEnabled){
-        prey03ChannelInterval();
+      prey2ChannelIntervalEnabled = document.getElementById('prey2-channel-interval-toggle').checked;
+      if(prey2ChannelIntervalEnabled){
+        prey2ChannelInterval();
       }
     });
 
@@ -541,7 +566,7 @@ function initControlPanel(){
       var message = document.getElementById('master-message-content').value
       for(var i = 0; i < 3 ; i++){
         var command = {
-          "target" : i+1,
+          "target" : i,
           "command" : "nping_icmp_oneshot",
           "parameters" : {
             "message" : message
@@ -556,9 +581,25 @@ function initControlPanel(){
 
    // PREY MESSAGE SEND
   document
-    .getElementById('prey01-message-button')
+    .getElementById('prey0-message-button')
     .addEventListener('click', async (e) => {
-      var message = document.getElementById('prey01-message-content').value
+      var message = document.getElementById('prey0-message-content').value
+      var command = {
+        "target" : 0,
+        "command" : "nping_icmp_oneshot",
+        "parameters" : {
+          "message" : message
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+  document
+    .getElementById('prey1-message-button')
+    .addEventListener('click', async (e) => {
+      var message = document.getElementById('prey1-message-content').value
       var command = {
         "target" : 1,
         "command" : "nping_icmp_oneshot",
@@ -572,27 +613,11 @@ function initControlPanel(){
       });
     });
   document
-    .getElementById('prey02-message-button')
+    .getElementById('prey2-message-button')
     .addEventListener('click', async (e) => {
-      var message = document.getElementById('prey02-message-content').value
+      var message = document.getElementById('prey2-message-content').value
       var command = {
         "target" : 2,
-        "command" : "nping_icmp_oneshot",
-        "parameters" : {
-          "message" : message
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
-    });
-  document
-    .getElementById('prey03-message-button')
-    .addEventListener('click', async (e) => {
-      var message = document.getElementById('prey03-message-content').value
-      var command = {
-        "target" : 3,
         "command" : "nping_icmp_oneshot",
         "parameters" : {
           "message" : message
@@ -621,44 +646,44 @@ function initControlPanel(){
 
   // PREY MESSAGE SEND INTERVALS
   document
-    .getElementById('prey01-message-interval-range')
+    .getElementById('prey0-message-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey01-message-interval').textContent=e.target.value;
+      document.getElementById('prey0-message-interval').textContent=e.target.value;
     });
   document
-    .getElementById('prey01-message-interval-toggle')
+    .getElementById('prey0-message-interval-toggle')
     .addEventListener('change', async (e) => {
-      prey01MessageIntervalEnabled = document.getElementById('prey01-message-interval-toggle').checked;
-      if(prey01MessageIntervalEnabled){
-        prey01MessageInterval();
+      prey0MessageIntervalEnabled = document.getElementById('prey0-message-interval-toggle').checked;
+      if(prey0MessageIntervalEnabled){
+        prey0MessageInterval();
       }
     });
 
   document
-    .getElementById('prey02-message-interval-range')
+    .getElementById('prey1-message-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey02-message-interval').textContent=e.target.value;
+      document.getElementById('prey1-message-interval').textContent=e.target.value;
     });
   document
-    .getElementById('prey02-message-interval-toggle')
+    .getElementById('prey1-message-interval-toggle')
     .addEventListener('change', async (e) => {
-      prey02MessageIntervalEnabled = document.getElementById('prey02-message-interval-toggle').checked;
-      if(prey02MessageIntervalEnabled){
-        prey02MessageInterval();
+      prey1MessageIntervalEnabled = document.getElementById('prey1-message-interval-toggle').checked;
+      if(prey1MessageIntervalEnabled){
+        prey1MessageInterval();
       }
     });
 
   document
-    .getElementById('prey03-message-interval-range')
+    .getElementById('prey2-message-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey03-message-interval').textContent=e.target.value;
+      document.getElementById('prey2-message-interval').textContent=e.target.value;
     });
   document
-    .getElementById('prey03-message-interval-toggle')
+    .getElementById('prey2-message-interval-toggle')
     .addEventListener('change', async (e) => {
-      prey03MessageIntervalEnabled = document.getElementById('prey03-message-interval-toggle').checked;
-      if(prey03MessageIntervalEnabled){
-        prey03MessageInterval();
+      prey2MessageIntervalEnabled = document.getElementById('prey2-message-interval-toggle').checked;
+      if(prey2MessageIntervalEnabled){
+        prey2MessageInterval();
       }
     });
 
@@ -682,7 +707,7 @@ function initControlPanel(){
       var count = document.getElementById('master-message-flood-count-range').value;
       for(var i = 0; i < 3 ; i++){
         var command = {
-          "target" : i+1,
+          "target" : i,
           "command" : "nping_icmp_flood",
           "parameters" : {
             "message" : message,
@@ -699,21 +724,52 @@ function initControlPanel(){
 
   //PREY FLOODS
   document
-    .getElementById('prey01-message-flood-delay-range')
+    .getElementById('prey0-message-flood-delay-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey01-message-flood-delay').textContent = e.target.value;
+      document.getElementById('prey0-message-flood-delay').textContent = e.target.value;
     });
   document
-    .getElementById('prey01-message-flood-count-range')
+    .getElementById('prey0-message-flood-count-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey01-message-flood-count').textContent = e.target.value;
+      document.getElementById('prey0-message-flood-count').textContent = e.target.value;
     });
   document
-    .getElementById('prey01-message-flood-button')
+    .getElementById('prey0-message-flood-button')
     .addEventListener('click', async (e) => {
-      var message = document.getElementById('prey01-message-content').value;
-      var delay = document.getElementById('prey01-message-flood-delay-range').value;
-      var count = document.getElementById('prey01-message-flood-count-range').value;
+      var message = document.getElementById('prey0-message-content').value;
+      var delay = document.getElementById('prey0-message-flood-delay-range').value;
+      var count = document.getElementById('prey0-message-flood-count-range').value;
+      var command = {
+        "target" : 0,
+        "command" : "nping_icmp_flood",
+        "parameters" : {
+          "message" : message,
+          "delay" : delay,
+          "count" : count
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+
+  document
+    .getElementById('prey1-message-flood-delay-range')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey1-message-flood-delay').textContent = e.target.value;
+    });
+  document
+    .getElementById('prey1-message-flood-count-range')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey1-message-flood-count').textContent = e.target.value;
+    });
+  document
+    .getElementById('prey1-message-flood-button')
+    .addEventListener('click', async (e) => {
+      var message = document.getElementById('prey1-message-content').value;
+      var delay = document.getElementById('prey1-message-flood-delay-range').value;
+      var count = document.getElementById('prey1-message-flood-count-range').value;
       var command = {
         "target" : 1,
         "command" : "nping_icmp_flood",
@@ -730,54 +786,23 @@ function initControlPanel(){
     });
 
   document
-    .getElementById('prey02-message-flood-delay-range')
+    .getElementById('prey2-message-flood-delay-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey02-message-flood-delay').textContent = e.target.value;
+      document.getElementById('prey2-message-flood-delay').textContent = e.target.value;
     });
   document
-    .getElementById('prey02-message-flood-count-range')
+    .getElementById('prey2-message-flood-count-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey02-message-flood-count').textContent = e.target.value;
+      document.getElementById('prey2-message-flood-count').textContent = e.target.value;
     });
   document
-    .getElementById('prey02-message-flood-button')
+    .getElementById('prey2-message-flood-button')
     .addEventListener('click', async (e) => {
-      var message = document.getElementById('prey02-message-content').value;
-      var delay = document.getElementById('prey02-message-flood-delay-range').value;
-      var count = document.getElementById('prey02-message-flood-count-range').value;
+      var message = document.getElementById('prey2-message-content').value;
+      var delay = document.getElementById('prey2-message-flood-delay-range').value;
+      var count = document.getElementById('prey2-message-flood-count-range').value;
       var command = {
         "target" : 2,
-        "command" : "nping_icmp_flood",
-        "parameters" : {
-          "message" : message,
-          "delay" : delay,
-          "count" : count
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
-    });
-
-  document
-    .getElementById('prey03-message-flood-delay-range')
-    .addEventListener('input', async (e) => {
-      document.getElementById('prey03-message-flood-delay').textContent = e.target.value;
-    });
-  document
-    .getElementById('prey03-message-flood-count-range')
-    .addEventListener('input', async (e) => {
-      document.getElementById('prey03-message-flood-count').textContent = e.target.value;
-    });
-  document
-    .getElementById('prey03-message-flood-button')
-    .addEventListener('click', async (e) => {
-      var message = document.getElementById('prey03-message-content').value;
-      var delay = document.getElementById('prey03-message-flood-delay-range').value;
-      var count = document.getElementById('prey03-message-flood-count-range').value;
-      var command = {
-        "target" : 3,
         "command" : "nping_icmp_flood",
         "parameters" : {
           "message" : message,
@@ -811,7 +836,7 @@ function initControlPanel(){
       var shape = document.getElementById('master-shape-select').value;
       for(var i = 0; i < 3 ;i++){
         var command = {
-          "target" : i+1,
+          "target" : i,
           "command" : "tone",
           "parameters" : {
             "frequency":frequency,
@@ -842,21 +867,66 @@ function initControlPanel(){
 
   // PREY TONE EVENT LISTENERS
   document
-    .getElementById('prey01-frequency-range')
+    .getElementById('prey0-frequency-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey01-frequency').textContent=e.target.value;
+      document.getElementById('prey0-frequency').textContent=e.target.value;
     });
   document
-    .getElementById('prey01-duration-range')
+    .getElementById('prey0-duration-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey01-duration').textContent=e.target.value;
+      document.getElementById('prey0-duration').textContent=e.target.value;
     });
   document
-    .getElementById('prey01-tone-button')
+    .getElementById('prey0-tone-button')
     .addEventListener('click', async (e) => {
-      var frequency = document.getElementById('prey01-frequency-range').value;
-      var duration = document.getElementById('prey01-duration-range').value;
-      var shape = document.getElementById('prey01-shape-select').value;
+      var frequency = document.getElementById('prey0-frequency-range').value;
+      var duration = document.getElementById('prey0-duration-range').value;
+      var shape = document.getElementById('prey0-shape-select').value;
+      var command = {
+        "target" : 0,
+        "command" : "tone",
+        "parameters" : {
+          "frequency":frequency,
+          "amplitude":1.0,
+          "duration":duration,
+          "shape":shape
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+  document
+    .getElementById('prey0-tone-interval-range')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey0-tone-interval').textContent=e.target.value;
+    });
+  document
+    .getElementById('prey0-tone-interval-toggle')
+    .addEventListener('change', async (e) => {
+      prey0ToneIntervalEnabled = document.getElementById('prey0-tone-interval-toggle').checked;
+      if(prey0ToneIntervalEnabled){
+        prey0ToneInterval();
+      }
+    });
+
+  document
+    .getElementById('prey1-frequency-range')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey1-frequency').textContent=e.target.value;
+    });
+  document
+    .getElementById('prey1-duration-range')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey1-duration').textContent=e.target.value;
+    });
+  document
+    .getElementById('prey1-tone-button')
+    .addEventListener('click', async (e) => {
+      var frequency = document.getElementById('prey1-frequency-range').value;
+      var duration = document.getElementById('prey1-duration-range').value;
+      var shape = document.getElementById('prey1-shape-select').value;
       var command = {
         "target" : 1,
         "command" : "tone",
@@ -873,35 +943,35 @@ function initControlPanel(){
       });
     });
   document
-    .getElementById('prey01-tone-interval-range')
+    .getElementById('prey1-tone-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey01-tone-interval').textContent=e.target.value;
+      document.getElementById('prey1-tone-interval').textContent=e.target.value;
     });
   document
-    .getElementById('prey01-tone-interval-toggle')
+    .getElementById('prey1-tone-interval-toggle')
     .addEventListener('change', async (e) => {
-      prey01ToneIntervalEnabled = document.getElementById('prey01-tone-interval-toggle').checked;
-      if(prey01ToneIntervalEnabled){
-        prey01ToneInterval();
+      prey1ToneIntervalEnabled = document.getElementById('prey1-tone-interval-toggle').checked;
+      if(prey1ToneIntervalEnabled){
+        prey1ToneInterval();
       }
     });
 
   document
-    .getElementById('prey02-frequency-range')
+    .getElementById('prey2-frequency-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey02-frequency').textContent=e.target.value;
+      document.getElementById('prey2-frequency').textContent=e.target.value;
     });
   document
-    .getElementById('prey02-duration-range')
+    .getElementById('prey2-duration-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey02-duration').textContent=e.target.value;
+      document.getElementById('prey2-duration').textContent=e.target.value;
     });
   document
-    .getElementById('prey02-tone-button')
+    .getElementById('prey2-tone-button')
     .addEventListener('click', async (e) => {
-      var frequency = document.getElementById('prey02-frequency-range').value;
-      var duration = document.getElementById('prey02-duration-range').value;
-      var shape = document.getElementById('prey02-shape-select').value;
+      var frequency = document.getElementById('prey2-frequency-range').value;
+      var duration = document.getElementById('prey2-duration-range').value;
+      var shape = document.getElementById('prey2-shape-select').value;
       var command = {
         "target" : 2,
         "command" : "tone",
@@ -918,61 +988,16 @@ function initControlPanel(){
       });
     });
   document
-    .getElementById('prey02-tone-interval-range')
+    .getElementById('prey2-tone-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey02-tone-interval').textContent=e.target.value;
+      document.getElementById('prey2-tone-interval').textContent=e.target.value;
     });
   document
-    .getElementById('prey02-tone-interval-toggle')
-    .addEventListener('change', async (e) => {
-      prey02ToneIntervalEnabled = document.getElementById('prey02-tone-interval-toggle').checked;
-      if(prey02ToneIntervalEnabled){
-        prey02ToneInterval();
-      }
-    });
-
-  document
-    .getElementById('prey03-frequency-range')
-    .addEventListener('input', async (e) => {
-      document.getElementById('prey03-frequency').textContent=e.target.value;
-    });
-  document
-    .getElementById('prey03-duration-range')
-    .addEventListener('input', async (e) => {
-      document.getElementById('prey03-duration').textContent=e.target.value;
-    });
-  document
-    .getElementById('prey03-tone-button')
-    .addEventListener('click', async (e) => {
-      var frequency = document.getElementById('prey03-frequency-range').value;
-      var duration = document.getElementById('prey03-duration-range').value;
-      var shape = document.getElementById('prey03-shape-select').value;
-      var command = {
-        "target" : 3,
-        "command" : "tone",
-        "parameters" : {
-          "frequency":frequency,
-          "amplitude":1.0,
-          "duration":duration,
-          "shape":shape
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
-    });
-  document
-    .getElementById('prey03-tone-interval-range')
-    .addEventListener('input', async (e) => {
-      document.getElementById('prey03-tone-interval').textContent=e.target.value;
-    });
-  document
-    .getElementById('prey03-tone-interval-toggle')
+    .getElementById('prey2-tone-interval-toggle')
     .addEventListener('change',(e) => {
-      prey03ToneIntervalEnabled = document.getElementById('prey03-tone-interval-toggle').checked;
-      if(prey03ToneIntervalEnabled){
-        prey03ToneInterval();
+      prey2ToneIntervalEnabled = document.getElementById('prey2-tone-interval-toggle').checked;
+      if(prey2ToneIntervalEnabled){
+        prey2ToneInterval();
       }
     });
 
@@ -1001,7 +1026,7 @@ function initControlPanel(){
       }
       for (var i = 0; i < 3 ; i++){
         var command = {
-          "target" : i+1,
+          "target" : i,
           "command" : "scan",
           "parameters" : {
             "args": parameters
@@ -1062,137 +1087,137 @@ function masterMessageInterval(){
   }
 }
 
-// PREY01 Intervals
-function prey01ShiftInterval(){
-  if(prey01ShiftIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey01-shift-interval-range').value);
+// PREY0 Intervals
+function prey0ShiftInterval(){
+  if(prey0ShiftIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey0-shift-interval-range').value);
     
-    var range = document.getElementById('prey01-color-shift-range');
+    var range = document.getElementById('prey0-color-shift-range');
     range.value = Math.round(255*Math.random());
     range.dispatchEvent(new Event('input'));
 
-    setTimeout(prey01ShiftInterval, interval);
+    setTimeout(prey0ShiftInterval, interval);
   }
 }
 
-function prey01ChannelInterval(){
-  if(prey01ChannelIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey01-channel-interval-range').value);
+function prey0ChannelInterval(){
+  if(prey0ChannelIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey0-channel-interval-range').value);
     
-    var range = document.getElementById('prey01-channel-range');
+    var range = document.getElementById('prey0-channel-range');
     range.value = Math.round(13*Math.random());
     range.dispatchEvent(new Event('input'));
 
-    setTimeout(prey01ChannelInterval, interval);
+    setTimeout(prey0ChannelInterval, interval);
   }
 }
 
-function prey01ToneInterval(){
-  if(prey01ToneIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey01-tone-interval-range').value);
+function prey0ToneInterval(){
+  if(prey0ToneIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey0-tone-interval-range').value);
     document
-      .getElementById('prey01-tone-button')
+      .getElementById('prey0-tone-button')
       .click();
-    setTimeout(prey01ToneInterval, interval);
+    setTimeout(prey0ToneInterval, interval);
   }
 }
 
-function prey01MessageInterval(){
-  if(prey01MessageIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey01-message-interval-range').value);
+function prey0MessageInterval(){
+  if(prey0MessageIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey0-message-interval-range').value);
     document
-      .getElementById('prey01-message-button')
+      .getElementById('prey0-message-button')
       .click();
-    setTimeout(prey01MessageInterval, interval);
+    setTimeout(prey0MessageInterval, interval);
   }
 }
 
-// PREY02 Intervals
-function prey02ShiftInterval(){
-  if(prey02ShiftIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey02-shift-interval-range').value);
+// PREY1 Intervals
+function prey1ShiftInterval(){
+  if(prey1ShiftIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey1-shift-interval-range').value);
     
-    var range = document.getElementById('prey02-color-shift-range');
+    var range = document.getElementById('prey1-color-shift-range');
     range.value = Math.round(255*Math.random());
     range.dispatchEvent(new Event('input'));
 
-    setTimeout(prey02ShiftInterval, interval);
+    setTimeout(prey1ShiftInterval, interval);
   }
 }
 
-function prey02ChannelInterval(){
-  if(prey02ChannelIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey02-channel-interval-range').value);
+function prey1ChannelInterval(){
+  if(prey1ChannelIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey1-channel-interval-range').value);
     
-    var range = document.getElementById('prey02-channel-range');
+    var range = document.getElementById('prey1-channel-range');
     range.value = Math.round(13*Math.random());
     range.dispatchEvent(new Event('input'));
 
-    setTimeout(prey02ChannelInterval, interval);
+    setTimeout(prey1ChannelInterval, interval);
   }
 }
 
-function prey02ToneInterval(){
-  if(prey02ToneIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey02-tone-interval-range').value);
+function prey1ToneInterval(){
+  if(prey1ToneIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey1-tone-interval-range').value);
     document
-      .getElementById('prey02-tone-button')
+      .getElementById('prey1-tone-button')
       .click();
-    setTimeout(prey02ToneInterval, interval);
+    setTimeout(prey1ToneInterval, interval);
   }
 }
 
-function prey02MessageInterval(){
-  if(prey02MessageIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey02-message-interval-range').value);
+function prey1MessageInterval(){
+  if(prey1MessageIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey1-message-interval-range').value);
     document
-      .getElementById('prey02-message-button')
+      .getElementById('prey1-message-button')
       .click();
-    setTimeout(prey02MessageInterval, interval);
+    setTimeout(prey1MessageInterval, interval);
   }
 }
 
-// PREY02 Intervals
-function prey03ShiftInterval(){
-  if(prey03ShiftIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey03-shift-interval-range').value);
+// PREY1 Intervals
+function prey2ShiftInterval(){
+  if(prey2ShiftIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey2-shift-interval-range').value);
     
-    var range = document.getElementById('prey03-color-shift-range');
+    var range = document.getElementById('prey2-color-shift-range');
     range.value = Math.round(255*Math.random());
     range.dispatchEvent(new Event('input'));
 
-    setTimeout(prey03ShiftInterval, interval);
+    setTimeout(prey2ShiftInterval, interval);
   }
 }
 
-function prey03ChannelInterval(){
-  if(prey03ChannelIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey03-channel-interval-range').value);
+function prey2ChannelInterval(){
+  if(prey2ChannelIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey2-channel-interval-range').value);
     
-    var range = document.getElementById('prey03-channel-range');
+    var range = document.getElementById('prey2-channel-range');
     range.value = Math.round(13*Math.random());
     range.dispatchEvent(new Event('input'));
 
-    setTimeout(prey03ChannelInterval, interval);
+    setTimeout(prey2ChannelInterval, interval);
   }
 }
 
-function prey03ToneInterval(){
-  if(prey03ToneIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey03-tone-interval-range').value);
+function prey2ToneInterval(){
+  if(prey2ToneIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey2-tone-interval-range').value);
     document
-      .getElementById('prey03-tone-button')
+      .getElementById('prey2-tone-button')
       .click();
-    setTimeout(prey03ToneInterval, interval);
+    setTimeout(prey2ToneInterval, interval);
   }
 }
 
-function prey03MessageInterval(){
-  if(prey03MessageIntervalEnabled){
-    var interval = Math.round(document.getElementById('prey03-message-interval-range').value);
+function prey2MessageInterval(){
+  if(prey2MessageIntervalEnabled){
+    var interval = Math.round(document.getElementById('prey2-message-interval-range').value);
     document
-      .getElementById('prey03-message-button')
+      .getElementById('prey2-message-button')
       .click();
-    setTimeout(prey03MessageInterval, interval);
+    setTimeout(prey2MessageInterval, interval);
   }
 }

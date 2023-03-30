@@ -18,20 +18,19 @@ import json
 path = os.path.dirname(os.path.abspath(__file__))
 debug = True
 
+# remote showtime
+targets = [
+'10.42.0.121',
+'10.42.0.122',
+'10.42.0.123'
+]
+
+# local rehearsal
 # targets = [
 # '10.42.0.120',
-# '10.42.0.121',
-# '10.42.0.122',
-# '10.42.0.123'
+# '10.42.0.124',
+# '10.42.0.125'
 # ]
-
-# for debug purposes >.<
-targets = [
-'10.42.0.120',
-'10.42.0.120',
-'10.42.0.124',
-'10.42.0.125'
-]
 
 #===========================================================================
 # Utilities
@@ -160,29 +159,6 @@ def nmap_scan(parameters):
 	except Exception as e:
 		print('nmap scan error:',e)
 
-'''
-
-cool nmap scan variations
-
- Please choose only one of -sA, -b, -sT, -sF, -sI, -sM, -sN, -sS, -sW, and -sX
-
-Scan Types
--sS
--sT
--sA
--sX
-
-With Add Ons
--sY
--sZ
--sV
--sC
--O
-
-
-
-'''
-
 #===========================================================================
 # Request handlers
 
@@ -191,32 +167,56 @@ class MainHandler(RequestHandler):
 		self.set_status(200)
 		self.render('index.html')
 	async def post(self):
-		try:
-			request = json.loads(self.request.body.decode('utf-8'))
-		except Exception as e:
-			print('While parsing request:', e)
-			self.set_status(400)
-		if 'set' in request:
-			url = 'http://%s' % targets[request['target']]
-			data = { "set" : request['set'] }
-			IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
-		elif 'command' in request:
-			parameters={}
+		action = self.get_query_argument('action',None)
+		
+		if action == 'get_states':
+			states = {'states':[]}
+			state = {}
+			for ip in targets:
+				url = 'http://%s/?resource=state' % ip
+				try:
+					response = await IOLoop.current().run_in_executor(
+						None,
+						lambda: session.get(url)
+					)
+					state = response.json()
+					state['online']=True
+				except:
+					state['online']=False
+					pass
+				state['ip']=ip
+				states['states'].append(state)
+			self.write(states)
+		else:
 			try:
-				command = request['command']
-				target = targets[int(request['target'])]
-				parameters = request['parameters']
-				parameters['target'] = target
+				request = json.loads(self.request.body.decode('utf-8'))
 			except Exception as e:
-				print('error parsing command:',e)
-			if command == 'nping_icmp_oneshot':
-				nping_icmp_oneshot(parameters)
-			elif command == 'nping_icmp_flood':
-				nping_icmp_flood(parameters)
-			elif command == 'tone':
-				sendTone(parameters)
-			elif command == 'scan':
-				nmap_scan(parameters)
+				print('While parsing request:', e)
+				self.set_status(400)
+
+			if 'set' in request:
+				url = 'http://%s' % targets[request['target']]
+				data = { "set" : request['set'] }
+				IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
+			elif 'command' in request:
+				parameters={}
+				try:
+					command = request['command']
+					target = targets[int(request['target'])]
+					parameters = request['parameters']
+					parameters['target'] = target
+				except Exception as e:
+					print('error parsing command:',e)
+				if command == 'nping_icmp_oneshot':
+					nping_icmp_oneshot(parameters)
+				elif command == 'nping_icmp_flood':
+					nping_icmp_flood(parameters)
+				elif command == 'tone':
+					sendTone(parameters)
+				elif command == 'scan':
+					nmap_scan(parameters)
+				elif command == 'spoof':
+					rogue_ap(parameters)
 			
 #===========================================================================
 # Executed when run as stand alone
