@@ -30,19 +30,6 @@ debug = True
 # Until I can figure out a way to tinker with the sockets and set appropriate permissions, this
 # is what requires running the script as root.
 
-# def analysePacket(pkt):
-#   try:
-#     if pkt[26] == 80:
-#       if pkt[63] > 0:
-#         string=""
-#         data = pkt[64:64 + pkt[63]]
-#         for byte in data:
-#           char = chr(byte)
-#           string+=char
-#         # print("SSID: %s\nPKT RAW: %s\nAP MAC: %s" % (string, pkt,pkt[36:42].hex()))
-#   except Exception as e:
-#     pass
-
 class Listener(Thread):
   def __init__(self, interfaces, chunkSize=4096):
     self.interfaces = interfaces
@@ -50,6 +37,7 @@ class Listener(Thread):
     self.sockets = self.initSockets()
     self.buffers = self.initBuffers() # data will be into and out of the buffer(s)
     self.doRun = False # flag to run main loop & help w/ smooth shutdown of thread
+    self.APs = {}
     Thread.__init__(self)
 
   def initSockets(self):
@@ -57,7 +45,7 @@ class Listener(Thread):
     for interface in self.interfaces:
       # etablishes a RAW socket on the given interface, e.g. eth0. meant to only be read.
       s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(0x0003))
-      s.bind((interface, 0x0003))
+      s.bind((interface,0))
       s.setblocking(False) # non-blocking
       sockets.append(s)
     return sockets
@@ -69,17 +57,63 @@ class Listener(Thread):
       buffers.append(bytearray())
     return buffers
 
+  def getAPs(self):
+    return self.APs.copy()
+
+  def analyzePacket(self, pkt):
+    AP = {}
+    SSID=None
+    MAC=None
+    try:
+      if pkt[25] >> 4 & 0b1111 == 0x4 and pkt[25] >> 2 & 0b11 ==0:
+
+        if pkt[49] == 0 and pkt[50] > 0:
+          try:
+            SSID=pkt[51:51+pkt[50]].decode('utf-8')
+            MAC=pkt[29:35].hex()
+          except:
+            pass
+        
+        if not SSID and pkt[54] == 0 and pkt[55] > 0:
+          try:
+            SSID=pkt[56:56+pkt[55]].decode('utf-8')
+            MAC=pkt[29:35].hex()
+          except:
+            pass
+        
+        if SSID:
+          return { SSID : { "MAC" : MAC } }  
+      
+      else:
+        return None     
+  
+    except:
+      return None
+      pass
+
+  def addToAPs(self, AP):
+    for key in AP.keys():
+      if not key in self.APs:
+        self.APs[key] = {}
+        self.APs[key]['MACs'] = [AP[key]['MAC']]
+        self.APs[key]['count'] = 1
+      else:
+        if not AP[key]['MAC'] in self.APs[key]['MACs']:
+          self.APs[key]['MACs'].append(AP[key]['MAC'])
+        self.APs[key]['count'] += 1
+
   def readSockets(self):
     for i in range(len(self.sockets)):
       if(len(self.buffers[i]) < self.chunkSize):
         try: # grab a chunk of data from the socket...
-          data = self.sockets[i].recv(self.chunkSize)
+          data = self.sockets[i].recv(8192)
           if data:
-            # print(len(data))
-            # if self.interfaces[i] == 'wlan1':
-            #   analysePacket(data)
+            if self.interfaces[i] == 'wlan1':
+              AP = self.analyzePacket(data) # extract APs from 
+              if AP:
+                self.addToAPs(AP)
             self.buffers[i] += data # if there's any data there, add it to the buffer
-        except: # if there's definitely no data to be read. the socket will throw and exception
+        except : # if there's definitely no data to be read. the socket will throw and exception
           pass
 
   def extractFrames(self, frames):
@@ -399,27 +433,27 @@ def checkWlan1Channel():
 
   return channel
 
-
-'''
-iw stuff
-
-
-'''
-
 #===========================================================================
 # Request handlers
 
 class MainHandler(RequestHandler):
   async def get(self):
-    state={
-      "print" : writer.enabled,
-      "color" : writer.color,
-      "control_characters" : writer.control_characters,
-      "color_shift" : writer.shift,
-      "wlan1_monitor_mode" : checkWlan1Mode(),
-      "wlan1_channel" : checkWlan1Channel()
-    }
-    self.write(state)
+    resource = self.get_query_argument('resource',None)
+    if resource == "state":
+      state={
+        "print" : writer.enabled,
+        "color" : writer.color,
+        "control_characters" : writer.control_characters,
+        "color_shift" : writer.shift,
+        "wlan1_monitor_mode" : checkWlan1Mode(),
+        "wlan1_channel" : checkWlan1Channel()
+      }
+      self.write(state)
+    elif resource == "aps":
+      APs = await IOLoop.current().run_in_executor(None, lambda: sockets.getAPs())
+      self.write(APs)
+    else:
+      self.write('<p>WOW</p>')
   async def post(self):
     command = None
     try:

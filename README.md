@@ -175,3 +175,58 @@ ON CLIENT
 ```
 sudo tinyDragonPrey
 ```
+
+### WiFi AP Setup
+
+1. `sudo apt-get install -y hostapd dnsmasq netfilter-persistent iptables-persistent`
+1. sudo systemctl unmask hostapd`
+1. `sudo nano /etc/dhcpcd.conf` and add to the end:
+
+```
+interface wlan1
+    static ip_address=10.10.20.1/24
+    nohook wpa_supplicant
+```
+
+1. `sudo nano /etc/sysctl.d/routed-ap.conf` to enable packet forwarding
+
+```
+net.ipv4.ip_forward=1
+```
+
+1. Setup packet routing
+
+```
+sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+sudo netfilter-persistent save
+```
+
+1. configure dnsmasq: `sudo nano /etc/dnsmasq.conf`
+
+```
+interface=wlan1
+dhcp-range=10.10.20.5,10.10.20.250,255.255.255.0,24h
+domain=wlan
+address=/gw.wlan/10.10.20.1
+# Specify the default route
+dhcp-option=3,10.10.20.1
+# Specify the DNS server address
+dhcp-option=6,10.10.20.1
+# Set the DHCP server to authoritative mode.
+dhcp-authoritative
+```
+1. enable wifi just in case `sudo rfkill unblock wlan`
+1. `sudo nano /etc/hostapd/hostapd.conf`
+
+```
+country_code=US
+interface=wlan1
+driver=nl80211
+ieee80211n=1
+wmm_enabled=0
+ssid=tinyDragonPrey
+hw_mode=g
+channel=5
+macaddr_acl=0
+ignore_broadcast_ssid=0
+```
