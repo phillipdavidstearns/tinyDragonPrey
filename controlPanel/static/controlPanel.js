@@ -18,15 +18,47 @@ var prey2MessageIntervalEnabled;
 var prey2ChannelIntervalEnabled;
 var prey2ShiftIntervalEnabled;
 
-var states;
+var apLists;
 
 (function() {
   'use strict';
   window.addEventListener('load', async function() {
-    states = await fetchStates();
+    await fetchStates();
+    apLists = await fetchAPs();
     initControlPanel();
   }, false);
 })();
+
+
+async function fetchAPs(){
+  var response = await fetch('/?action=get_aps',{method:"POST"})
+  var { apLists } = await response.json();
+  for(var i = 0 ; i < apLists.length ; i++){
+    var currentSelect = document.getElementById(`prey${i}-ssid-select`);
+    var select = document.createElement('select');
+    select.setAttribute('class', "form-select my-1");
+    select.setAttribute('id',`prey${i}-ssid-select`);
+    var keys = Object.keys(apLists[i]);
+    if (apLists[i].online){
+      for(var j = 0 ; j < keys.length; j++){
+        var option = document.createElement('option');
+        if(keys[j] !== 'online'){
+          option.setAttribute('value',keys[j]);
+          option.textContent = `${keys[j]} - ${apLists[i][keys[j]].count}`;
+          select.appendChild(option);
+        }
+      }
+    } else {
+      option = document.createElement('option');
+      option.textContent = 'unreachable';
+      select.appendChild(option);
+      select.disabled = true;
+    }
+    select.selectedIndex = 0;
+    currentSelect.replaceWith(select);
+  }
+  return apLists;
+}
 
 async function fetchStates(){
   var response = await fetch('/?action=get_states',{method:"POST"})
@@ -47,13 +79,138 @@ async function fetchStates(){
     }
     
   }
-  return states;
 }
 
 
 function initControlPanel(){
 
   // EVENT LISTENERS
+  document
+    .getElementById(`update-status`)
+    .addEventListener('click', async (e) => {
+      await fetchStates();
+    });
+  
+  document
+    .getElementById(`shutdown`)
+    .addEventListener('click', async (e) => {
+      command = {'shutdown' : true}
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+
+  // AP Refresh buttons
+  for(var i = 0 ; i < 3 ; i++){
+    document
+    .getElementById(`prey${i}-ssid-button`)
+    .addEventListener('click', async (e) => {
+      apLists = await fetchAPs();
+    });
+  }
+
+  //AP enable/disable
+  document
+    .getElementById(`prey0-ap-toggle`)
+    .addEventListener('change', async (e) => {
+      var ssid = document.getElementById(`prey0-ssid-select`).value;
+      document.getElementById(`prey0-monitor-toggle`).disabled = e.target.checked;
+      document.getElementById(`prey0-channel-range`).disabled = e.target.checked;
+      var toggle = document.getElementById(`prey0-channel-interval-toggle`);
+      toggle.checked = false;
+      toggle.disabled = e.target.checked;
+      toggle.dispatchEvent(new Event('change'));
+      var command 
+      if(e.target.checked){
+        command = {
+          'target' : 0,
+          'command' : 'start_ap',
+          'parameters' : {
+            'SSID' : ssid,
+            'channel' : 5,
+            'MAC' : apLists[0][ssid].MACs[0]
+          }
+        }
+      } else {
+        command = {
+          'target' : 0,
+          'command' : 'stop_ap',
+          'parameters' : {}
+        }
+      }
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+  document
+    .getElementById(`prey1-ap-toggle`)
+    .addEventListener('change', async (e) => {
+      var ssid = document.getElementById(`prey1-ssid-select`).value;
+      document.getElementById(`prey1-monitor-toggle`).disabled = e.target.checked;
+      document.getElementById(`prey1-channel-range`).disabled = e.target.checked;
+      var toggle = document.getElementById(`prey1-channel-interval-toggle`);
+      toggle.checked = false;
+      toggle.disabled = e.target.checked;
+      toggle.dispatchEvent(new Event('change'));
+      var command 
+      if(e.target.checked){
+        command = {
+          'target' : 1,
+          'command' : 'start_ap',
+          'parameters' : {
+            'SSID' : ssid,
+            'channel' : 5,
+            'MAC' : apLists[1][ssid].MACs[0]
+          }
+        }
+      } else {
+        command = {
+          'target' : 1,
+          'command' : 'stop_ap',
+          'parameters' : {}
+        }
+      }
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+  document
+    .getElementById(`prey2-ap-toggle`)
+    .addEventListener('change', async (e) => {
+      console.log(i)
+      var ssid = document.getElementById(`prey2-ssid-select`).value;
+      document.getElementById(`prey2-monitor-toggle`).disabled = e.target.checked;
+      document.getElementById(`prey2-channel-range`).disabled = e.target.checked;
+      var toggle = document.getElementById(`prey2-channel-interval-toggle`);
+      toggle.checked = false;
+      toggle.disabled = e.target.checked;
+      toggle.dispatchEvent(new Event('change'));
+      var command 
+      if(e.target.checked){
+        command = {
+          'target' : 2,
+          'command' : 'start_ap',
+          'parameters' : {
+            'SSID' : ssid,
+            'channel' : 5,
+            'MAC' : apLists[2][ssid].MACs[0]
+          }
+        }
+      } else {
+        command = {
+          'target' : 2,
+          'command' : 'stop_ap',
+          'parameters' : {}
+        }
+      }
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
 
   //MASTER PRINT
   document

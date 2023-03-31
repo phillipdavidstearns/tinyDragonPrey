@@ -340,25 +340,70 @@ def shutdown():
 
 #===========================================================================
 
+
 def startRogueAP(parameters):
-  # disable monitor mode
-  if wlan1_monitor_mode:
-    setMonitorMode(False)
-  # write new config from parameters
-  subprocess.call(
-    ["systemctl","start","hostapd"],
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL
-  )
+  try:
+
+    # stop monitor mode
+    if wlan1_monitor_mode:
+      setMonitorMode(False)
+    
+    #format the MAC Address to spoof
+    MAC = parameters['MAC']
+    MAC = '%s:%s:%s:%s:%s:%s' % (MAC[:2],MAC[2:4],MAC[4:6],MAC[6:8],MAC[8:10],MAC[10:12])
+    
+
+    subprocess.call(
+      ["ip","link","set","wlan1","down"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+    
+    #spoof the address  
+    subprocess.call(
+      ["ip","link","set","wlan1","address", MAC],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+
+    subprocess.call(
+      ["ip","link","set","wlan1","up"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+
+    subprocess.call(
+      ["systemctl","stop","hostapd"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+
+    # write new config from parameters
+    config = hostapdConfTemplate.format(ssid=parameters['SSID'],channel=parameters['channel'])
+    f = open('/etc/hostapd/hostapd.conf','w')
+    f.write(config)
+    f.close()
+
+    #start the AP if we're lucky...
+    subprocess.call(
+      ["systemctl","start","hostapd"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+  except:
+    pass
 
 def stopRogueAP():
-  subprocess.call(
-    ["systemctl","stop","hostapd"],
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL
-  )
-  if wlan1_monitor_mode:
-    setMonitorMode(True)
+  try:
+    subprocess.call(
+      ["systemctl","stop","hostapd"],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+    if wlan1_monitor_mode:
+      setMonitorMode(True)
+  except:
+    pass
 
 def setMonitorMode(enable):
 
@@ -474,7 +519,7 @@ class MainHandler(RequestHandler):
       APs = await IOLoop.current().run_in_executor(None, lambda: sockets.getAPs())
       self.write(APs)
     else:
-      self.write('<p>WOW</p>')
+      self.write('<p>HOORAY! YOU DID IT!</p>')
   async def post(self):
     command = None
     try:
@@ -524,10 +569,11 @@ class MainHandler(RequestHandler):
       elif 'action' in command:
         action = command['action']
         if action == 'shutdown':
+          print("<3<3<3<3<3<3<3<3 J/K! ROFLOL! KTHXBAI! <3<3<3<3<3<3<3<3")
           IOLoop.current().run_in_executor(
             None,
             lambda: subprocess.call(
-              ["shutdown","-h","now"],
+              ["kill", PID],
               stdout=subprocess.DEVNULL,
               stderr=subprocess.DEVNULL
             )
@@ -541,12 +587,12 @@ class MainHandler(RequestHandler):
               stderr=subprocess.DEVNULL
             )
           )
-        elif action == 'start_spoof':
+        elif action == 'start_ap':
           IOLoop.current().run_in_executor(
             None,
             lambda: startRogueAP(command['parameters'])
           )
-        elif action == 'stop_spoof':
+        elif action == 'stop_ap':
           IOLoop.current().run_in_executor(
             None,
             lambda: stopRogueAP()
@@ -554,6 +600,8 @@ class MainHandler(RequestHandler):
 
 #===========================================================================
 # Executed when run as stand alone
+
+from inspect import getsourcefile
 
 def make_app():
   settings = dict(
@@ -567,6 +615,11 @@ def make_app():
   return Application(urls, **settings)
 
 if __name__ == "__main__":
+  PID = str(os.getpid())
+  templatePath = os.path.dirname(os.readlink(__file__))
+  f = open(os.path.join(templatePath,'hostapd-conf.template'))
+  hostapdConfTemplate = f.read()
+  f.close()
   try:
     # check to see if user is root
     if os.getuid() != 0:

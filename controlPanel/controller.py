@@ -19,18 +19,18 @@ path = os.path.dirname(os.path.abspath(__file__))
 debug = True
 
 # remote showtime
-targets = [
-'10.42.0.121',
-'10.42.0.122',
-'10.42.0.123'
-]
+# targets = [
+# '10.42.0.121',
+# '10.42.0.122',
+# '10.42.0.123'
+# ]
 
 # local rehearsal
-# targets = [
-# '10.42.0.120',
-# '10.42.0.124',
-# '10.42.0.125'
-# ]
+targets = [
+'10.42.0.120',
+'10.42.0.124',
+'10.42.0.125'
+]
 
 #===========================================================================
 # Utilities
@@ -187,6 +187,24 @@ class MainHandler(RequestHandler):
 				state['ip']=ip
 				states['states'].append(state)
 			self.write(states)
+		elif action == 'get_aps':
+			apLists = {'apLists':[]}
+			aplist = {}
+			for ip in targets:
+				url = 'http://%s/?resource=aps' % ip
+				try:
+					response = await IOLoop.current().run_in_executor(
+						None,
+						lambda: session.get(url)
+					)
+					aplist = response.json()
+					aplist['online']=True
+				except:
+					aplist['online']=False
+					pass
+				apLists['apLists'].append(aplist)
+			self.write(apLists)
+
 		else:
 			try:
 				request = json.loads(self.request.body.decode('utf-8'))
@@ -215,8 +233,34 @@ class MainHandler(RequestHandler):
 					sendTone(parameters)
 				elif command == 'scan':
 					nmap_scan(parameters)
-				elif command == 'spoof':
-					rogue_ap(parameters)
+				elif command == 'start_ap':
+					start_ap(parameters)
+				elif command == 'stop_ap':
+					stop_ap(parameters)
+			elif 'shutdown' in request:
+				for ip in targets:
+					url = 'http://%s' % ip
+					data = { "action" : "shutdown" }
+					IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
+			
+
+#===========================================================================
+# Executed when run as stand alone
+
+def start_ap(parameters):
+	print('start_ap:',parameters)
+	url = 'http://%s' % parameters['target']
+	data = { 
+		"action": "start_ap",
+		"parameters" : parameters
+	}
+	IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
+			
+def stop_ap(parameters):
+	print('stop_ap:',parameters)
+	url = 'http://%s' % parameters['target']
+	data = { "action": "stop_ap" }
+	IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
 			
 #===========================================================================
 # Executed when run as stand alone
