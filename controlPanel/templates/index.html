@@ -19,18 +19,13 @@
         <div class="row justify-content-center gx-0 m-1 border border-dark border-1 rounded" id="master-panel">
           <div class="col mx-1  p-3" id="master-settings">
             <div class="row justify-content-center align-items-center">
-              <div class="col-1">
+              <div class="col-3">
                 <button class="btn btn-sm btn-outline-secondary mx-1" id="update-status">
-                    +
+                    refresh
                 </button>
               </div>
-              <div class="col-10">
+              <div class="col-9">
                 <p class="text-center h4">Master Settings</p>
-              </div>
-              <div class="col-1">
-                <button class="btn btn-sm btn-outline-secondary mx-1" id="shutdown">
-                    !
-                </button>
               </div>
             </div>
             <hr>
@@ -408,6 +403,60 @@
                 <button class="btn btn-sm btn-outline-secondary my-1" id="prey0-tone-button">beep</button>
               </div>
             </div>
+            <hr>
+            <div class="row align-items-center justify-content-center text-center">
+              <div class="col-2">
+                <select class="form-select mb-1" id="prey0-scan-mode-select" name="prey0-scan-mode">
+                  <option value="-sS">-sS</option>
+                  <option value="-sT" selected>-sT</option>
+                  <option value="-sA">-sA</option>
+                  <option value="-sX">-sX</option>
+                </select>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey0-scan-option-sy">
+                  <label class="form-check-label" for="prey0-character-toggle">
+                    sY
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey0-scan-option-sz">
+                  <label class="form-check-label" for="prey0-character-toggle">
+                    sZ
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey0-scan-option-sv">
+                  <label class="form-check-label" for="prey0-character-toggle">
+                    sV
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey0-scan-option-sc">
+                  <label class="form-check-label" for="prey0-character-toggle">
+                    sC
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey0-scan-option-o">
+                  <label class="form-check-label" for="prey0-character-toggle">
+                    O
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey0-nmap-button">nmap</button>
+              </div>
+            </div>
             <div class="row justify-content-center text-center align-items-center">
               <div class="col-1">
                 <button class="btn btn-sm btn-outline-secondary mx-1" id="prey0-ssid-button">
@@ -584,6 +633,60 @@
                 <button class="btn btn-sm btn-outline-secondary my-1" id="prey1-tone-button">beep</button>
               </div>
             </div>
+            <hr>
+            <div class="row align-items-center justify-content-center text-center">
+              <div class="col-2">
+                <select class="form-select mb-1" id="prey1-scan-mode-select" name="prey1-scan-mode">
+                  <option value="-sS">-sS</option>
+                  <option value="-sT" selected>-sT</option>
+                  <option value="-sA">-sA</option>
+                  <option value="-sX">-sX</option>
+                </select>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey1-scan-option-sy">
+                  <label class="form-check-label" for="prey1-character-toggle">
+                    sY
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey1-scan-option-sz">
+                  <label class="form-check-label" for="prey1-character-toggle">
+                    sZ
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey1-scan-option-sv">
+                  <label class="form-check-label" for="prey1-character-toggle">
+                    sV
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey1-scan-option-sc">
+                  <label class="form-check-label" for="prey1-character-toggle">
+                    sC
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey1-scan-option-o">
+                  <label class="form-check-label" for="prey1-character-toggle">
+                    O
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey1-nmap-button">nmap</button>
+              </div>
+            </div>
             <div class="row justify-content-center text-center align-items-center">
               <div class="col-1">
                 <button class="btn btn-sm btn-outline-secondary mx-1" id="prey1-ssid-button">
@@ -758,6 +861,60 @@
             <div class="row text-center">
               <div class="col">
                 <button class="btn btn-sm btn-outline-secondary my-1" id="prey2-tone-button">beep</button>
+              </div>
+            </div>
+            <hr>
+            <div class="row align-items-center justify-content-center text-center">
+              <div class="col-2">
+                <select class="form-select mb-1" id="prey2-scan-mode-select" name="prey2-scan-mode">
+                  <option value="-sS">-sS</option>
+                  <option value="-sT" selected>-sT</option>
+                  <option value="-sA">-sA</option>
+                  <option value="-sX">-sX</option>
+                </select>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey2-scan-option-sy">
+                  <label class="form-check-label" for="prey2-character-toggle">
+                    sY
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey2-scan-option-sz">
+                  <label class="form-check-label" for="prey2-character-toggle">
+                    sZ
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey2-scan-option-sv">
+                  <label class="form-check-label" for="prey2-character-toggle">
+                    sV
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey2-scan-option-sc">
+                  <label class="form-check-label" for="prey2-character-toggle">
+                    sC
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey2-scan-option-o">
+                  <label class="form-check-label" for="prey2-character-toggle">
+                    O
+                  </label>
+                </div>
+              </div>
+              <div class="col-1">
+                <button class="btn btn-sm btn-outline-secondary my-1" id="prey2-nmap-button">nmap</button>
               </div>
             </div>
             <div class="row justify-content-center align-items-center">

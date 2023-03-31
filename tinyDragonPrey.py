@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import codecs
 import sys
 from signal import *
 import socket
@@ -348,31 +349,35 @@ def startRogueAP(parameters):
     if wlan1_monitor_mode:
       setMonitorMode(False)
     
-    #format the MAC Address to spoof
-    MAC = parameters['MAC']
-    MAC = '%s:%s:%s:%s:%s:%s' % (MAC[:2],MAC[2:4],MAC[4:6],MAC[6:8],MAC[8:10],MAC[10:12])
-    
+    # use provided MAC, if none, pick a random one
+    if parameters['MAC']:
+      MAC = parameters['MAC']
+    else:
+      MAC = codecs.encode(os.urandom(6), 'hex').decode()
 
-    subprocess.call(
+    #format the MAC Address to spoof
+    MAC = '%s:%s:%s:%s:%s:%s' % (MAC[:2],MAC[2:4],MAC[4:6],MAC[6:8],MAC[8:10],MAC[10:12])
+
+    subprocess.run(
       ["ip","link","set","wlan1","down"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
     
     #spoof the address  
-    subprocess.call(
+    subprocess.run(
       ["ip","link","set","wlan1","address", MAC],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
 
-    subprocess.call(
+    subprocess.run(
       ["ip","link","set","wlan1","up"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
 
-    subprocess.call(
+    subprocess.run(
       ["systemctl","stop","hostapd"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
@@ -380,22 +385,24 @@ def startRogueAP(parameters):
 
     # write new config from parameters
     config = hostapdConfTemplate.format(ssid=parameters['SSID'],channel=parameters['channel'])
+    print(config)
     f = open('/etc/hostapd/hostapd.conf','w')
     f.write(config)
     f.close()
 
     #start the AP if we're lucky...
-    subprocess.call(
+    subprocess.run(
       ["systemctl","start","hostapd"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
-  except:
+  except Exception as e:
+    print(e)
     pass
 
 def stopRogueAP():
   try:
-    subprocess.call(
+    subprocess.run(
       ["systemctl","stop","hostapd"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
@@ -408,33 +415,33 @@ def stopRogueAP():
 def setMonitorMode(enable):
 
   if enable:
-    subprocess.call(
+    subprocess.run(
       ["ip","link","set","wlan1","down"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
-    subprocess.call(
+    subprocess.run(
       ["iwconfig","wlan1","mode","monitor"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
-    subprocess.call(
+    subprocess.run(
       ["ip","link","set","wlan1","up"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
   else:
-    subprocess.call(
+    subprocess.run(
       ["ip","link","set","wlan1","down"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
-    subprocess.call([
+    subprocess.run([
       "iwconfig","wlan1","mode","managed"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
-    subprocess.call(
+    subprocess.run(
       ["ip","link","set","wlan1","up"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
@@ -549,7 +556,7 @@ class MainHandler(RequestHandler):
           if wlan1_monitor_mode:
             await IOLoop.current().run_in_executor(
               None,
-              lambda: subprocess.call(
+              lambda: subprocess.run(
                 ["iwconfig","wlan1","channel",str(max(1,min(14,wlan1_channel)))],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
@@ -560,7 +567,7 @@ class MainHandler(RequestHandler):
           wlan1_channel = int(value)
           await IOLoop.current().run_in_executor(
             None,
-            lambda: subprocess.call(
+            lambda: subprocess.run(
               ["iwconfig","wlan1","channel",str(max(1,min(14,wlan1_channel)))],
               stdout=subprocess.DEVNULL,
               stderr=subprocess.DEVNULL
@@ -568,26 +575,8 @@ class MainHandler(RequestHandler):
           )
       elif 'action' in command:
         action = command['action']
-        if action == 'shutdown':
-          print("<3<3<3<3<3<3<3<3 J/K! ROFLOL! KTHXBAI! <3<3<3<3<3<3<3<3")
-          IOLoop.current().run_in_executor(
-            None,
-            lambda: subprocess.call(
-              ["kill", PID],
-              stdout=subprocess.DEVNULL,
-              stderr=subprocess.DEVNULL
-            )
-          )
-        elif action == 'reboot':
-          IOLoop.current().run_in_executor(
-            None,
-            lambda: subprocess.call(
-              ["reboot"],
-              stdout=subprocess.DEVNULL,
-              stderr=subprocess.DEVNULL
-            )
-          )
-        elif action == 'start_ap':
+        if action == 'start_ap':
+          print(command['parameters'])
           IOLoop.current().run_in_executor(
             None,
             lambda: startRogueAP(command['parameters'])

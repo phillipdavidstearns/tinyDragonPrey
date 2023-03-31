@@ -247,7 +247,8 @@ sudo tinyDragonPrey
 ### WiFi AP Setup
 
 1. `sudo apt-get install -y hostapd dnsmasq netfilter-persistent iptables-persistent`
-1. sudo systemctl unmask hostapd`
+1. `sudo systemctl unmask hostapd`
+1. `sudo systemctl disable hostapd`
 1. `sudo nano /etc/dhcpcd.conf` and add to the end:
 
 ```
@@ -269,6 +270,7 @@ sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 sudo netfilter-persistent save
 ```
 
+1. make a copy of the default config file: `sudo cp /etc/dnsmasq.conf{,.bak}`
 1. configure dnsmasq: `sudo nano /etc/dnsmasq.conf`
 
 ```
@@ -289,7 +291,7 @@ dhcp-authoritative
 ```
 country_code=US
 interface=wlan1
-driver=nl80211sduo
+driver=nl80211
 ieee80211n=1
 wmm_enabled=0
 ssid=tinyDragonPrey
@@ -298,3 +300,5 @@ channel=5
 macaddr_acl=0
 ignore_broadcast_ssid=0
 ```
+
+1. Reboot and activate AP with `sudo systemctl start hostapd.service`

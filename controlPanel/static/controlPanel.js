@@ -38,10 +38,14 @@ async function fetchAPs(){
     var select = document.createElement('select');
     select.setAttribute('class', "form-select my-1");
     select.setAttribute('id',`prey${i}-ssid-select`);
+    var option = document.createElement('option');
+    option.setAttribute('value','_FREE PUBLIC WIFI_');
+    option.textContent = '_FREE PUBLIC WIFI_';
+    select.appendChild(option);
     var keys = Object.keys(apLists[i]);
     if (apLists[i].online){
       for(var j = 0 ; j < keys.length; j++){
-        var option = document.createElement('option');
+        option = document.createElement('option');
         if(keys[j] !== 'online'){
           option.setAttribute('value',keys[j]);
           option.textContent = `${keys[j]} - ${apLists[i][keys[j]].count}`;
@@ -90,16 +94,6 @@ function initControlPanel(){
     .addEventListener('click', async (e) => {
       await fetchStates();
     });
-  
-  document
-    .getElementById(`shutdown`)
-    .addEventListener('click', async (e) => {
-      command = {'shutdown' : true}
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
-    });
 
   // AP Refresh buttons
   for(var i = 0 ; i < 3 ; i++){
@@ -122,6 +116,12 @@ function initControlPanel(){
       toggle.disabled = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
       var command 
+      var MAC = null
+      if(apLists[0][ssid]){
+        if(apLists[0][ssid]['MACs']){
+          MAC = apLists[0][ssid].MACs[0]
+        }
+      }
       if(e.target.checked){
         command = {
           'target' : 0,
@@ -129,7 +129,7 @@ function initControlPanel(){
           'parameters' : {
             'SSID' : ssid,
             'channel' : 5,
-            'MAC' : apLists[0][ssid].MACs[0]
+            'MAC' : MAC
           }
         }
       } else {
@@ -154,7 +154,13 @@ function initControlPanel(){
       toggle.checked = false;
       toggle.disabled = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
-      var command 
+      var command; 
+      var MAC = null;
+      if(apLists[1][ssid]){
+        if(apLists[1][ssid]['MACs']){
+          MAC = apLists[1][ssid].MACs[0];
+        }
+      }
       if(e.target.checked){
         command = {
           'target' : 1,
@@ -162,7 +168,7 @@ function initControlPanel(){
           'parameters' : {
             'SSID' : ssid,
             'channel' : 5,
-            'MAC' : apLists[1][ssid].MACs[0]
+            'MAC' : MAC
           }
         }
       } else {
@@ -188,7 +194,13 @@ function initControlPanel(){
       toggle.checked = false;
       toggle.disabled = e.target.checked;
       toggle.dispatchEvent(new Event('change'));
-      var command 
+      var command;
+      var MAC = null;
+      if  (apLists[2][ssid]){
+        if(apLists[2][ssid]['MACs']){
+          MAC = apLists[2][ssid].MACs[0];
+        }
+      }
       if(e.target.checked){
         command = {
           'target' : 2,
@@ -196,7 +208,7 @@ function initControlPanel(){
           'parameters' : {
             'SSID' : ssid,
             'channel' : 5,
-            'MAC' : apLists[2][ssid].MACs[0]
+            'MAC' : MAC
           }
         }
       } else {
@@ -1194,6 +1206,113 @@ function initControlPanel(){
           body: JSON.stringify(command)
         });
       }
+    });
+
+  // PREY NMAPs
+  document
+    .getElementById('prey0-nmap-button')
+    .addEventListener('click', async (e) => {
+      var parameters = [];
+      
+      parameters.push(document.getElementById('prey0-scan-mode-select').value);
+      
+      if (document.getElementById('prey0-scan-option-sc').checked){
+        parameters.push("-sC");
+      }
+      if (document.getElementById('prey0-scan-option-sv').checked){
+        parameters.push("-sV");
+      }
+      if (document.getElementById('prey0-scan-option-sy').checked){
+        parameters.push("-sY");
+      }
+      if (document.getElementById('prey0-scan-option-sz').checked){
+        parameters.push("-sZ");
+      }
+      if (document.getElementById('prey0-scan-option-o').checked){
+        parameters.push("-O");
+      }
+
+      var command = {
+        "target" : 0,
+        "command" : "scan",
+        "parameters" : {
+          "args": parameters
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+  document
+    .getElementById('prey1-nmap-button')
+    .addEventListener('click', async (e) => {
+      var parameters = [];
+      
+      parameters.push(document.getElementById('prey1-scan-mode-select').value);
+      
+      if (document.getElementById('prey1-scan-option-sc').checked){
+        parameters.push("-sC");
+      }
+      if (document.getElementById('prey1-scan-option-sv').checked){
+        parameters.push("-sV");
+      }
+      if (document.getElementById('prey1-scan-option-sy').checked){
+        parameters.push("-sY");
+      }
+      if (document.getElementById('prey1-scan-option-sz').checked){
+        parameters.push("-sZ");
+      }
+      if (document.getElementById('prey1-scan-option-o').checked){
+        parameters.push("-O");
+      }
+
+      var command = {
+        "target" : 1,
+        "command" : "scan",
+        "parameters" : {
+          "args": parameters
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
+    });
+    document
+    .getElementById('prey2-nmap-button')
+    .addEventListener('click', async (e) => {
+      var parameters = [];
+      
+      parameters.push(document.getElementById('prey2-scan-mode-select').value);
+      
+      if (document.getElementById('prey2-scan-option-sc').checked){
+        parameters.push("-sC");
+      }
+      if (document.getElementById('prey2-scan-option-sv').checked){
+        parameters.push("-sV");
+      }
+      if (document.getElementById('prey2-scan-option-sy').checked){
+        parameters.push("-sY");
+      }
+      if (document.getElementById('prey2-scan-option-sz').checked){
+        parameters.push("-sZ");
+      }
+      if (document.getElementById('prey2-scan-option-o').checked){
+        parameters.push("-O");
+      }
+
+      var command = {
+        "target" : 2,
+        "command" : "scan",
+        "parameters" : {
+          "args": parameters
+        }
+      };
+      fetch('/', {
+        method: "POST",
+        body: JSON.stringify(command)
+      });
     });
 
 }

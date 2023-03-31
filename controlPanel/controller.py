@@ -99,7 +99,7 @@ def nping_icmp_oneshot_bytes(parameters):
 		message = parameters['message']
 		IOLoop.current().run_in_executor(
 			None,
-			lambda: subprocess.call(
+			lambda: subprocess.run(
 				["sudo","nping","--icmp",target,"-c","1","--data",message.hex()],
 				stdout=subprocess.DEVNULL,
 				stderr=subprocess.DEVNULL
@@ -115,7 +115,7 @@ def nping_icmp_oneshot(parameters):
 		message = parameters['message']
 		IOLoop.current().run_in_executor(
 			None,
-			lambda: subprocess.call(
+			lambda: subprocess.run(
 				["sudo","nping","--icmp",target,"-c","1","--data-string",message],
 				stdout=subprocess.DEVNULL,
 				stderr=subprocess.DEVNULL
@@ -132,7 +132,7 @@ def nping_icmp_flood(parameters):
 		count = parameters['count']
 		IOLoop.current().run_in_executor(
 			None,
-			lambda: subprocess.call(
+			lambda: subprocess.run(
 				["sudo","nping","--icmp",target,"-c",count,"--delay",delay,"--data-string",message],
 				stdout=subprocess.DEVNULL,
 				stderr=subprocess.DEVNULL
@@ -150,7 +150,7 @@ def nmap_scan(parameters):
 		call.append(parameters['target'])
 		IOLoop.current().run_in_executor(
 			None,
-			lambda: subprocess.call(
+			lambda: subprocess.run(
 				call,
 				stdout=subprocess.DEVNULL,
 				stderr=subprocess.DEVNULL
@@ -213,9 +213,13 @@ class MainHandler(RequestHandler):
 				self.set_status(400)
 
 			if 'set' in request:
-				url = 'http://%s' % targets[request['target']]
-				data = { "set" : request['set'] }
-				IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
+				try:
+					url = 'http://%s' % targets[request['target']]
+					data = { "set" : request['set'] }
+					IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
+				except Exception as e:
+					self.set_status(500)
+					print('Setting parameters for %s:' % parameters['target'], e)
 			elif 'command' in request:
 				parameters={}
 				try:
@@ -237,31 +241,31 @@ class MainHandler(RequestHandler):
 					start_ap(parameters)
 				elif command == 'stop_ap':
 					stop_ap(parameters)
-			elif 'shutdown' in request:
-				for ip in targets:
-					url = 'http://%s' % ip
-					data = { "action" : "shutdown" }
-					IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
-			
 
 #===========================================================================
 # Executed when run as stand alone
 
 def start_ap(parameters):
-	print('start_ap:',parameters)
-	url = 'http://%s' % parameters['target']
-	data = { 
-		"action": "start_ap",
-		"parameters" : parameters
-	}
-	IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
-			
+	try:
+		# print('start_ap:',parameters)
+		url = 'http://%s' % parameters['target']
+		data = { 
+			"action": "start_ap",
+			"parameters" : parameters
+		}
+		IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
+	except Exception as e:
+		print('While setting up rogue AP on %s:' % parameters['target'], e)
+
 def stop_ap(parameters):
-	print('stop_ap:',parameters)
-	url = 'http://%s' % parameters['target']
-	data = { "action": "stop_ap" }
-	IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
-			
+	try:
+		# print('stop_ap:',parameters)
+		url = 'http://%s' % parameters['target']
+		data = { "action": "stop_ap" }
+		IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
+	except Exception as e:
+		print('While stopping rogue AP on %s:' % parameters['target'], e)
+
 #===========================================================================
 # Executed when run as stand alone
 
