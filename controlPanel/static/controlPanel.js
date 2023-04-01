@@ -988,14 +988,24 @@ function initControlPanel(){
   // MASTER TONE EVENT LISTENERS
 
   document
+    .getElementById('master-frequency')
+    .addEventListener('input', async (e) => {
+      document.getElementById('master-frequency-range').value=e.target.value;
+    });
+  document
+    .getElementById('master-duration')
+    .addEventListener('input', async (e) => {
+      document.getElementById('master-duration-range').value=e.target.value;
+    });
+  document
     .getElementById('master-frequency-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('master-frequency').textContent=e.target.value;
+      document.getElementById('master-frequency').value=e.target.value;
     });
   document
     .getElementById('master-duration-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('master-duration').textContent=e.target.value;
+      document.getElementById('master-duration').value=e.target.value;
     });
   document
     .getElementById('master-tone-button')
@@ -1023,7 +1033,12 @@ function initControlPanel(){
   document
     .getElementById('master-tone-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('master-tone-interval').textContent=e.target.value;
+      document.getElementById('master-tone-interval').value=e.target.value;
+    });
+  document
+    .getElementById('master-tone-interval')
+    .addEventListener('input', async (e) => {
+      document.getElementById('master-tone-interval-range').value=e.target.value;
     });
   document
     .getElementById('master-tone-interval-toggle')
@@ -1036,14 +1051,24 @@ function initControlPanel(){
 
   // PREY TONE EVENT LISTENERS
   document
+    .getElementById('prey0-frequency')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey0-frequency-range').value=e.target.value;
+    });
+  document
     .getElementById('prey0-frequency-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey0-frequency').textContent=e.target.value;
+      document.getElementById('prey0-frequency').value=e.target.value;
+    });
+  document
+    .getElementById('prey0-duration')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey0-duration-range').value=e.target.value;
     });
   document
     .getElementById('prey0-duration-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey0-duration').textContent=e.target.value;
+      document.getElementById('prey0-duration').value=e.target.value;
     });
   document
     .getElementById('prey0-tone-button')
@@ -1067,9 +1092,14 @@ function initControlPanel(){
       });
     });
   document
+    .getElementById('prey0-tone-interval')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey0-tone-interval-range').value=e.target.value;
+    });
+  document
     .getElementById('prey0-tone-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey0-tone-interval').textContent=e.target.value;
+      document.getElementById('prey0-tone-interval').value=e.target.value;
     });
   document
     .getElementById('prey0-tone-interval-toggle')
@@ -1083,12 +1113,22 @@ function initControlPanel(){
   document
     .getElementById('prey1-frequency-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey1-frequency').textContent=e.target.value;
+      document.getElementById('prey1-frequency').value=e.target.value;
     });
   document
     .getElementById('prey1-duration-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey1-duration').textContent=e.target.value;
+      document.getElementById('prey1-duration').value=e.target.value;
+    });
+  document
+    .getElementById('prey1-frequency')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey1-frequency-range').value=e.target.value;
+    });
+  document
+    .getElementById('prey1-duration')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey1-duration-range').value=e.target.value;
     });
   document
     .getElementById('prey1-tone-button')
@@ -1114,7 +1154,12 @@ function initControlPanel(){
   document
     .getElementById('prey1-tone-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey1-tone-interval').textContent=e.target.value;
+      document.getElementById('prey1-tone-interval').value=e.target.value;
+    });
+  document
+    .getElementById('prey1-tone-interval')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey1-tone-interval-range').value=e.target.value;
     });
   document
     .getElementById('prey1-tone-interval-toggle')
@@ -1128,12 +1173,22 @@ function initControlPanel(){
   document
     .getElementById('prey2-frequency-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey2-frequency').textContent=e.target.value;
+      document.getElementById('prey2-frequency').value=e.target.value;
     });
   document
     .getElementById('prey2-duration-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey2-duration').textContent=e.target.value;
+      document.getElementById('prey2-duration').value=e.target.value;
+    });
+  document
+    .getElementById('prey2-frequency')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey2-frequency-range').value=e.target.value;
+    });
+  document
+    .getElementById('prey2-duration')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey2-duration-range').value=e.target.value;
     });
   document
     .getElementById('prey2-tone-button')
@@ -1157,9 +1212,14 @@ function initControlPanel(){
       });
     });
   document
+    .getElementById('prey2-tone-interval')
+    .addEventListener('input', async (e) => {
+      document.getElementById('prey2-tone-interval-range').value=e.target.value;
+    });
+  document
     .getElementById('prey2-tone-interval-range')
     .addEventListener('input', async (e) => {
-      document.getElementById('prey2-tone-interval').textContent=e.target.value;
+      document.getElementById('prey2-tone-interval').value=e.target.value;
     });
   document
     .getElementById('prey2-tone-interval-toggle')
@@ -1388,8 +1448,39 @@ function prey0ChannelInterval(){
   }
 }
 
+function randomRange(min=0, max=0){
+  if (max === min){
+    return 0.0;
+  } else if (min > max) {
+    var smaller = max;
+    max = min;
+    min = smaller;
+  }
+  var diff = max - min;
+  return diff*Math.random()+min;
+}
+
 function prey0ToneInterval(){
   if(prey0ToneIntervalEnabled){
+    if(document.getElementById('prey0-interval-random-check').checked){
+      var range = document.getElementById('prey0-tone-interval-range');
+      range.value = Math.round(randomRange(50,2500));
+      range.dispatchEvent(new Event('input'));
+    }
+    if(document.getElementById('prey0-duration-random-check').checked){
+      var range = document.getElementById('prey0-duration-range');
+      range.value = Math.round(randomRange(2,8164));
+      range.dispatchEvent(new Event('input'));
+    }
+    if(document.getElementById('prey0-frequency-random-check').checked){
+      var range = document.getElementById('prey0-frequency-range');
+      range.value = Math.round(randomRange(10,10000));
+      range.dispatchEvent(new Event('input'));
+    }
+    if(document.getElementById('prey0-shape-random-check').checked){
+      var select = document.getElementById('prey0-shape-select');
+      select.selectedIndex = Math.round(Math.random() * (select.options.length-1));
+    }
     var interval = Math.round(document.getElementById('prey0-tone-interval-range').value);
     document
       .getElementById('prey0-tone-button')
@@ -1435,6 +1526,25 @@ function prey1ChannelInterval(){
 
 function prey1ToneInterval(){
   if(prey1ToneIntervalEnabled){
+    if(document.getElementById('prey1-interval-random-check').checked){
+      var range = document.getElementById('prey1-tone-interval-range');
+      range.value = Math.round(randomRange(50,2500));
+      range.dispatchEvent(new Event('input'));
+    }
+    if(document.getElementById('prey1-duration-random-check').checked){
+      var range = document.getElementById('prey1-duration-range');
+      range.value = Math.round(randomRange(2,8164));
+      range.dispatchEvent(new Event('input'));
+    }
+    if(document.getElementById('prey1-frequency-random-check').checked){
+      var range = document.getElementById('prey1-frequency-range');
+      range.value = Math.round(randomRange(10,10000));
+      range.dispatchEvent(new Event('input'));
+    }
+    if(document.getElementById('prey1-shape-random-check').checked){
+      var select = document.getElementById('prey1-shape-select');
+      select.selectedIndex = Math.round(Math.random() * (select.options.length-1));
+    }
     var interval = Math.round(document.getElementById('prey1-tone-interval-range').value);
     document
       .getElementById('prey1-tone-button')
@@ -1480,6 +1590,25 @@ function prey2ChannelInterval(){
 
 function prey2ToneInterval(){
   if(prey2ToneIntervalEnabled){
+    if(document.getElementById('prey2-interval-random-check').checked){
+      var range = document.getElementById('prey2-tone-interval-range');
+      range.value = Math.round(randomRange(50,2500));
+      range.dispatchEvent(new Event('input'));
+    }
+    if(document.getElementById('prey2-duration-random-check').checked){
+      var range = document.getElementById('prey2-duration-range');
+      range.value = Math.round(randomRange(2,8164));
+      range.dispatchEvent(new Event('input'));
+    }
+    if(document.getElementById('prey2-frequency-random-check').checked){
+      var range = document.getElementById('prey2-frequency-range');
+      range.value = Math.round(randomRange(10,10000));
+      range.dispatchEvent(new Event('input'));
+    }
+    if(document.getElementById('prey2-shape-random-check').checked){
+      var select = document.getElementById('prey2-shape-select');
+      select.selectedIndex = Math.round(Math.random() * (select.options.length-1));
+    }
     var interval = Math.round(document.getElementById('prey2-tone-interval-range').value);
     document
       .getElementById('prey2-tone-button')

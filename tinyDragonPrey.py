@@ -385,7 +385,6 @@ def startRogueAP(parameters):
 
     # write new config from parameters
     config = hostapdConfTemplate.format(ssid=parameters['SSID'],channel=parameters['channel'])
-    print(config)
     f = open('/etc/hostapd/hostapd.conf','w')
     f.write(config)
     f.close()
@@ -397,7 +396,6 @@ def startRogueAP(parameters):
       stderr=subprocess.DEVNULL
     )
   except Exception as e:
-    print(e)
     pass
 
 def stopRogueAP():
@@ -576,7 +574,6 @@ class MainHandler(RequestHandler):
       elif 'action' in command:
         action = command['action']
         if action == 'start_ap':
-          print(command['parameters'])
           IOLoop.current().run_in_executor(
             None,
             lambda: startRogueAP(command['parameters'])

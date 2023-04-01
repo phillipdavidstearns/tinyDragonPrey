@@ -144,7 +144,7 @@
           </div>
           <div class="col mx-1 p-3" id="master-tone">
             <p class="text-center h4">Master Tone</p> 
-            <div class="row justify-content-center text-center">
+            <div class="row justify-content-center text-center align-items-center">
               <div class="col">
                 <select class="form-select mb-1" id="master-shape-select" name="master-shape">
                   <option value="sine">sine</option>
@@ -155,27 +155,33 @@
                 </select>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-10">
                 <label for="master-frequency-range" class="form-label">frequency</label>
                 <input type="range" class="form-range w-75" min="10" max="10000" id="master-frequency-range" value="1000">
-                <span id="master-frequency">1000</span>
+              </div>
+              <div class="col-2">
+                <input class="form-control" type="number" min="10" max="10000" id="master-frequency" value=1000>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-10">
                 <label for="master-duration-range" class="form-label">duration</label>
                 <input type="range" class="form-range w-75" min="2" max="8164" id="master-duration-range" value="500">
-                <span id="master-duration">500</span>
+              </div>
+              <div class="col-2">
+                <input class="form-control" type="number" min="2" max="8164" id="master-duration" value=1000>
               </div>
             </div>
             <div class="row text-center">
-              <div class="col">
+              <div class="col-8">
                 <label for="master-tone-interval-range" class="form-label">interval</label>
                 <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="master-tone-interval-range" value="1000">
-                <span id="master-tone-interval">1000</span>
               </div>
-              <div class="col">
+               <div class="col-2">
+                <input class="form-control" type="number" min="50" max="2500" id="master-tone-interval" value=1000>
+              </div>
+              <div class="col-2">
                 <div class="d-inline-block form-check form-switch">
                   <input class="form-check-input" type="checkbox" id="master-tone-interval-toggle">
                   <label class="form-check-label" for="master-tone-interval-toggle">retrigger</label>
@@ -354,14 +360,19 @@
                 <span id="prey0-message-flood-count">10</span>
               </div>
             </div>
-            <div class="row justify-content-center text-center">
+            <div class="row justify-content-center text-center align-items-center">
               <div class="col">
                 <button class="btn btn-sm btn-outline-secondary my-1" id="prey0-message-flood-button">flood</button>
               </div>
             </div>
             <hr>
-            <div class="row justify-content-center text-center">
-              <div class="col">
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey0-shape-random-check">
+                </div>
+              </div>
+              <div class="col-11">
                 <select class="form-select mb-1" id="prey0-shape-select" name="prey0-shape">
                   <option value="sine">sine</option>
                   <option value="tri">tri</option>
@@ -371,30 +382,51 @@
                 </select>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey0-frequency-random-check">
+                </div>
+              </div>
+              <div class="col-8">
                 <label for="prey0-frequency-range" class="form-label">frequency</label>
                 <input type="range" class="form-range w-75" min="10" max="10000" id="prey0-frequency-range" value="1000">
-                <span id="prey0-frequency">1000</span>
+              </div>
+              <div class="col-3">
+                <input class="form-control" type="number" min="10" max="10000" id="prey0-frequency" value=1000>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey0-duration-random-check">
+                </div>
+              </div>
+              <div class="col-8">
                 <label for="prey0-duration-range" class="form-label">duration</label>
                 <input type="range" class="form-range w-75" min="2" max="8164" id="prey0-duration-range" value="500">
-                <span id="prey0-duration">500</span>
+              </div>
+              <div class="col-3">
+                <input class="form-control" type="number" min="2" max="8164" id="prey0-duration" value=1000>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
-                <label for="prey0-tone-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="prey0-tone-interval-range" value="1000">
-                <span id="prey0-tone-interval">1000</span>
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey0-interval-random-check">
+                </div>
               </div>
-              <div class="col">
+              <div class="col-7">
+                <label for="prey0-tone-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-75" min="50" max="2500" step="1" id="prey0-tone-interval-range" value="1000">
+              </div>
+              <div class="col-2">
+                <input class="form-control" type="number" min="50" max="2500" id="prey0-tone-interval" value=1000>
+              </div>
+              <div class="col-2">
                 <div class="d-inline-block form-check form-switch">
                   <input class="form-check-input" type="checkbox" id="prey0-tone-interval-toggle">
-                  <label class="form-check-label" for="prey0-tone-interval-toggle">retrigger</label>
+                  <label class="form-check-label" for="prey0-tone-interval-toggle">retrig</label>
                 </div>
               </div>
             </div>
@@ -590,8 +622,13 @@
               </div>
             </div>
             <hr>
-            <div class="row justify-content-center text-center">
-              <div class="col">
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey1-shape-random-check">
+                </div>
+              </div>
+              <div class="col-11">
                 <select class="form-select mb-1" id="prey1-shape-select" name="prey1-shape">
                   <option value="sine">sine</option>
                   <option value="tri">tri</option>
@@ -601,30 +638,51 @@
                 </select>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey1-frequency-random-check">
+                </div>
+              </div>
+              <div class="col-8">
                 <label for="prey1-frequency-range" class="form-label">frequency</label>
                 <input type="range" class="form-range w-75" min="10" max="10000" id="prey1-frequency-range" value="1000">
-                <span id="prey1-frequency">1000</span>
+              </div>
+              <div class="col-3">
+                <input class="form-control" type="number" min="10" max="10000" id="prey1-frequency" value=1000>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey1-duration-random-check">
+                </div>
+              </div>
+              <div class="col-8">
                 <label for="prey1-duration-range" class="form-label">duration</label>
                 <input type="range" class="form-range w-75" min="2" max="8164" id="prey1-duration-range" value="500">
-                <span id="prey1-duration">500</span>
+              </div>
+              <div class="col-3">
+                <input class="form-control" type="number" min="2" max="8164" id="prey1-duration" value=1000>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
-                <label for="prey1-tone-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="prey1-tone-interval-range" value="1000">
-                <span id="prey1-tone-interval">1000</span>
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey1-interval-random-check">
+                </div>
               </div>
-              <div class="col">
+              <div class="col-7">
+                <label for="prey1-tone-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-75" min="50" max="2500" step="1" id="prey1-tone-interval-range" value="1000">
+              </div>
+              <div class="col-2">
+                <input class="form-control" type="number" min="50" max="2500" id="prey1-tone-interval" value=1000>
+              </div>
+              <div class="col-2">
                 <div class="d-inline-block form-check form-switch">
                   <input class="form-check-input" type="checkbox" id="prey1-tone-interval-toggle">
-                  <label class="form-check-label" for="prey1-tone-interval-toggle">retrigger</label>
+                  <label class="form-check-label" for="prey1-tone-interval-toggle">retrig</label>
                 </div>
               </div>
             </div>
@@ -820,8 +878,13 @@
               </div>
             </div>
             <hr>
-            <div class="row justify-content-center text-center">
-              <div class="col">
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey2-shape-random-check">
+                </div>
+              </div>
+              <div class="col-11">
                 <select class="form-select mb-1" id="prey2-shape-select" name="prey2-shape">
                   <option value="sine">sine</option>
                   <option value="tri">tri</option>
@@ -831,30 +894,51 @@
                 </select>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey2-frequency-random-check">
+                </div>
+              </div>
+              <div class="col-8">
                 <label for="prey2-frequency-range" class="form-label">frequency</label>
                 <input type="range" class="form-range w-75" min="10" max="10000" id="prey2-frequency-range" value="1000">
-                <span id="prey2-frequency">1000</span>
+              </div>
+              <div class="col-3">
+                <input class="form-control" type="number" min="10" max="10000" id="prey2-frequency" value=1000>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey2-duration-random-check">
+                </div>
+              </div>
+              <div class="col-8">
                 <label for="prey2-duration-range" class="form-label">duration</label>
                 <input type="range" class="form-range w-75" min="2" max="8164" id="prey2-duration-range" value="500">
-                <span id="prey2-duration">500</span>
+              </div>
+              <div class="col-3">
+                <input class="form-control" type="number" min="2" max="8164" id="prey2-duration" value=1000>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
-                <label for="prey2-tone-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="prey2-tone-interval-range" value="1000">
-                <span id="prey2-tone-interval">1000</span>
+            <div class="row justify-content-center text-center align-items-center">
+              <div class="col-1">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="prey2-interval-random-check">
+                </div>
               </div>
-              <div class="col">
+              <div class="col-7">
+                <label for="prey2-tone-interval-range" class="form-label">interval</label>
+                <input type="range" class="form-range w-75" min="50" max="2500" step="1" id="prey2-tone-interval-range" value="1000">
+              </div>
+              <div class="col-2">
+                <input class="form-control" type="number" min="50" max="2500" id="prey2-tone-interval" value=1000>
+              </div>
+              <div class="col-2">
                 <div class="d-inline-block form-check form-switch">
                   <input class="form-check-input" type="checkbox" id="prey2-tone-interval-toggle">
-                  <label class="form-check-label" for="prey2-tone-interval-toggle">retrigger</label>
+                  <label class="form-check-label" for="prey2-tone-interval-toggle">retrig</label>
                 </div>
               </div>
             </div>
