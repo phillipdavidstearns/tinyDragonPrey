@@ -107,7 +107,7 @@ class Listener(Thread):
     for i in range(len(self.sockets)):
       if(len(self.buffers[i]) < self.chunkSize):
         try: # grab a chunk of data from the socket...
-          data = self.sockets[i].recv(8192)
+          data = self.sockets[i].recv(65535)
           if data:
             if self.interfaces[i] == 'wlan1':
               AP = self.analyzePacket(data) # extract APs from 

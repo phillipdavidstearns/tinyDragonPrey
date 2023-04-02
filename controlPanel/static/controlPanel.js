@@ -29,6 +29,14 @@ var apLists;
   }, false);
 })();
 
+var networkSSIDs = [
+  'CPLWIFI',
+  'ChicagoWiFi',
+  'TRITRIANGLE GUEST',
+  '_Free_ORD_Wi-Fi_',
+  'Boingo Hotspot',
+  '_FREE PUBLIC WIFI_'
+]
 
 async function fetchAPs(){
   var response = await fetch('/?action=get_aps',{method:"POST"})
@@ -38,10 +46,12 @@ async function fetchAPs(){
     var select = document.createElement('select');
     select.setAttribute('class', "form-select my-1");
     select.setAttribute('id',`prey${i}-ssid-select`);
-    var option = document.createElement('option');
-    option.setAttribute('value','_FREE PUBLIC WIFI_');
-    option.textContent = '_FREE PUBLIC WIFI_';
-    select.appendChild(option);
+    for(var k = 0 ; k < networkSSIDs.length; k++){
+       var option = document.createElement('option');
+      option.setAttribute('value', networkSSIDs[k]);
+      option.textContent = networkSSIDs[k];
+      select.appendChild(option);
+    }
     var keys = Object.keys(apLists[i]);
     if (apLists[i].online){
       for(var j = 0 ; j < keys.length; j++){
@@ -186,7 +196,6 @@ function initControlPanel(){
   document
     .getElementById(`prey2-ap-toggle`)
     .addEventListener('change', async (e) => {
-      console.log(i)
       var ssid = document.getElementById(`prey2-ssid-select`).value;
       document.getElementById(`prey2-monitor-toggle`).disabled = e.target.checked;
       document.getElementById(`prey2-channel-range`).disabled = e.target.checked;
@@ -544,16 +553,15 @@ function initControlPanel(){
   document
     .getElementById('master-monitor-toggle')
     .addEventListener('change', async (e) => {
-      var toggle;
-      toggle = document.getElementById('prey0-monitor-toggle');
-      toggle.checked = e.target.checked;
-      toggle.dispatchEvent(new Event('change'));
-      toggle = document.getElementById('prey1-monitor-toggle');
-      toggle.checked = e.target.checked;
-      toggle.dispatchEvent(new Event('change'));
-      toggle = document.getElementById('prey2-monitor-toggle');
-      toggle.checked = e.target.checked;
-      toggle.dispatchEvent(new Event('change'));
+      for(var i = 0; i < 3; i++){
+        var toggle;
+        toggle = document.getElementById(`prey${i}-monitor-toggle`);
+        if(toggle.disabled == false){
+          toggle.checked = e.target.checked;
+          toggle.dispatchEvent(new Event('change'));
+      
+        }
+      }
     });
 
   //PREY MONITOR MODE TOGGLES
@@ -608,16 +616,13 @@ function initControlPanel(){
     .getElementById('master-channel-range')
     .addEventListener('input', async (e) => {
       document.getElementById('master-channel').textContent=e.target.value;
-      var range;
-      range = document.getElementById('prey0-channel-range');
-      range.value = e.target.value;
-      range.dispatchEvent(new Event('input'));
-      range = document.getElementById('prey1-channel-range');
-      range.value = e.target.value;
-      range.dispatchEvent(new Event('input'));
-      range = document.getElementById('prey2-channel-range');
-      range.value = e.target.value;
-      range.dispatchEvent(new Event('input'));
+      for(var i = 0 ; i < 3; i++){
+        var range = document.getElementById(`prey${i}-channel-range`);
+        if(range.disabled == false ){
+          range.value = e.target.value;
+          range.dispatchEvent(new Event('input'));
+        }
+      }
     });
 
   //PREY WLAN1 CHANNEL RANGE
