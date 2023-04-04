@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import codecs
 import sys
 from signal import *
 import socket
@@ -9,16 +8,14 @@ import pyaudio
 import re
 from threading import Thread
 from time import sleep
-import random
 from decouple import config
 from logging import getLogger
 
 import subprocess
 
-from tornado.web import authenticated, Application, RequestHandler, StaticFileHandler
+from tornado.web import Application, RequestHandler, StaticFileHandler
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
-from tornado.httputil import HTTPHeaders
 import json
 
 path = os.path.dirname(os.path.abspath(__file__))
@@ -186,14 +183,12 @@ class Writer(Thread):
   def printBuffers(self):
     writeFlag = False
     # assembles a string to be printed for each stream in the buffers.
-    size = 0
+    size = self.chunkSize
     for n in range(len(self.buffers)):
       string = ''
       # if there's less data in the buffer than the chunkSize, we print only what is there
       if self.chunkSize > len(self.buffers[n]):
         size = len(self.buffers[n])
-      else:
-        size = self.chunkSize
 
       if size > 0:
         writeFlag = True
@@ -219,7 +214,7 @@ class Writer(Thread):
         string+='\x1b[0m' # terminate the string with the ANSI reset escape sequence
       if self.enabled and writeFlag:
         sys.stdout.write(string)
-      self.buffers[n]=self.buffers[n][size:] # remove the printed bit from the buffers
+      self.buffers[n]=self.buffers[n][size:] # remove chunk from queue. will enmpty over time if disabled
     if self.enabled and writeFlag:
       sys.stdout.flush()
 
@@ -353,7 +348,7 @@ def startRogueAP(parameters):
     if parameters['MAC']:
       MAC = parameters['MAC']
     else:
-      MAC = codecs.encode(os.urandom(6), 'hex').decode()
+      MAC = os.urandom(6).hex()
 
     #format the MAC Address to spoof
     MAC = '%s:%s:%s:%s:%s:%s' % (MAC[:2],MAC[2:4],MAC[4:6],MAC[6:8],MAC[8:10],MAC[10:12])
@@ -587,12 +582,8 @@ class MainHandler(RequestHandler):
 #===========================================================================
 # Executed when run as stand alone
 
-from inspect import getsourcefile
-
 def make_app():
   settings = dict(
-    template_path = os.path.join(path, 'templates'),
-    static_path = os.path.join(path, 'static'),
     debug = debug
   )
   urls = [
@@ -601,7 +592,6 @@ def make_app():
   return Application(urls, **settings)
 
 if __name__ == "__main__":
-  PID = str(os.getpid())
   templatePath = os.path.dirname(os.readlink(__file__))
   f = open(os.path.join(templatePath,'hostapd-conf.template'))
   hostapdConfTemplate = f.read()

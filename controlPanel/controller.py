@@ -19,18 +19,18 @@ path = os.path.dirname(os.path.abspath(__file__))
 debug = True
 
 # remote showtime
-targets = [
-'10.42.0.121',
-'10.42.0.122',
-'10.42.0.123'
-]
+# targets = [
+# '10.42.0.121',
+# '10.42.0.122',
+# '10.42.0.123'
+# ]
 
 # local rehearsal
-# targets = [
-# '10.42.0.120',
-# '10.42.0.124',
-# '10.42.0.125'
-# ]
+targets = [
+'10.42.0.120',
+'10.42.0.124',
+'10.42.0.125'
+]
 
 #===========================================================================
 # Utilities
@@ -177,7 +177,7 @@ class MainHandler(RequestHandler):
 				try:
 					response = await IOLoop.current().run_in_executor(
 						None,
-						lambda: session.get(url)
+						lambda: session.get(url,timeout=(2,2))
 					)
 					state = response.json()
 					state['online']=True
@@ -195,7 +195,7 @@ class MainHandler(RequestHandler):
 				try:
 					response = await IOLoop.current().run_in_executor(
 						None,
-						lambda: session.get(url)
+						lambda: session.get(url,timeout=(2,2))
 					)
 					aplist = response.json()
 					aplist['online']=True
