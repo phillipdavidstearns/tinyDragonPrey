@@ -7,6 +7,11 @@ import requests
 import subprocess
 from math import pi, sin, pow
 from decouple import config
+from netifaces import AF_INET, ifaddresses
+import socket
+import asyncio
+from threading import Thread
+from queue import Queue
 
 from tornado.web import authenticated, Application, RequestHandler, StaticFileHandler
 from tornado.httpserver import HTTPServer
@@ -17,20 +22,6 @@ import json
 
 path = os.path.dirname(os.path.abspath(__file__))
 debug = True
-
-# remote showtime
-# targets = [
-# '10.42.0.121',
-# '10.42.0.122',
-# '10.42.0.123'
-# ]
-
-# local rehearsal
-targets = [
-'10.42.0.120',
-'10.42.0.124',
-'10.42.0.125'
-]
 
 #===========================================================================
 # Utilities
@@ -159,6 +150,62 @@ def nmap_scan(parameters):
 	except Exception as e:
 		print('nmap scan error:',e)
 
+def availableNetworks():
+	ips={}
+	if_names = socket.if_nameindex()
+	for if_name in if_names:
+		try:
+			ip = { if_name[1] : ifaddresses(if_name[1])[AF_INET][0]['addr'] }
+			ips.update(ip)
+		except:
+			pass
+	return ips
+
+def scanTarget(target_ip, timeout=0.5):
+	try:
+		url='http://'+target_ip+'/?resource=state'
+		response = session.get(
+			url,
+			timeout=timeout
+		)
+		result = response.json()
+		return result
+	except:
+		return None
+
+def worker(targets, q):
+	while True:
+		ip = q.get()
+		result = scanTarget(ip)
+		if result:
+			target={}
+			target['ip'] = ip
+			target['state'] = result
+			targets['targets'].append(target)
+		q.task_done()
+
+def threadedScan(ip, concurrent=128):
+	targets = { 'targets' : [] }
+	q = Queue(concurrent * 2)
+	for i in range(concurrent):
+		t = Thread(target=worker,args=(targets,q))
+		t.daemon = True
+		t.start()
+	network = '.'.join(ip.split('.')[:3])
+	if ip.split('.')[0] == '127':
+		return targets
+	try:
+		for i in range(255):
+			target_ip = '.'.join([network,str(i)])
+			if target_ip == ip:
+				continue
+			q.put(target_ip)
+		q.join()
+	except Exception as e:
+		print('In threadedScan(): %s' % repr(e))
+	finally:
+		return targets
+
 #===========================================================================
 # Request handlers
 
@@ -169,7 +216,30 @@ class MainHandler(RequestHandler):
 	async def post(self):
 		action = self.get_query_argument('action',None)
 		
-		if action == 'get_states':
+		if action == 'get_networks':
+			networks = availableNetworks()
+			self.write(networks)
+		elif action == 'get_targets':
+			network = self.get_query_argument('network', None)
+			if network:
+				# targets = await acquireTargets(network)
+				targets = await IOLoop.current().run_in_executor(
+					None,
+					threadedScan,
+					network
+				)
+				print('targets: %s' % targets)
+				if targets['targets']:
+					self.write(targets)
+				else:
+					self.set_status(404)
+			else:
+				self.set_status(404)
+		elif action == 'get_states':
+			targets = self.get_body_argument('targets', None)
+			if not targets:
+				self.set_status(404)
+				return
 			states = {'states':[]}
 			state = {}
 			for ip in targets:
@@ -188,6 +258,10 @@ class MainHandler(RequestHandler):
 				states['states'].append(state)
 			self.write(states)
 		elif action == 'get_aps':
+			targets = self.get_body_argument('targets', None)
+			if not targets:
+				self.set_status(404)
+				return
 			apLists = {'apLists':[]}
 			aplist = {}
 			for ip in targets:
@@ -204,7 +278,6 @@ class MainHandler(RequestHandler):
 					pass
 				apLists['apLists'].append(aplist)
 			self.write(apLists)
-
 		else:
 			try:
 				request = json.loads(self.request.body.decode('utf-8'))

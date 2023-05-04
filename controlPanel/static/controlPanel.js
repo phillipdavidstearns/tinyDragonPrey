@@ -19,10 +19,12 @@ var prey2ChannelIntervalEnabled;
 var prey2ShiftIntervalEnabled;
 
 var apLists;
+var targets;
 
 (function() {
   'use strict';
   window.addEventListener('load', async function() {
+    await updateNetworkList();
     await fetchStates();
     apLists = await fetchAPs();
     initControlPanel();
@@ -38,60 +40,105 @@ var networkSSIDs = [
   '_FREE PUBLIC WIFI_'
 ]
 
+async function fetchNetworks(){
+  var response = await fetch('/?action=get_networks',{method:"POST"})
+  if(response.ok){
+    var networkList = null;
+      try{
+        networkList = await response.json();
+      } catch(error){
+        console.error(error);
+      } finally{
+        return networkList;
+      }
+  } else{
+    return null;
+  }
+}
+
 async function fetchAPs(){
-  var response = await fetch('/?action=get_aps',{method:"POST"})
-  var { apLists } = await response.json();
-  for(var i = 0 ; i < apLists.length ; i++){
-    var currentSelect = document.getElementById(`prey${i}-ssid-select`);
-    var select = document.createElement('select');
-    select.setAttribute('class', "form-select my-1");
-    select.setAttribute('id',`prey${i}-ssid-select`);
-    for(var k = 0 ; k < networkSSIDs.length; k++){
-       var option = document.createElement('option');
-      option.setAttribute('value', networkSSIDs[k]);
-      option.textContent = networkSSIDs[k];
-      select.appendChild(option);
-    }
-    var keys = Object.keys(apLists[i]);
-    if (apLists[i].online){
-      for(var j = 0 ; j < keys.length; j++){
-        option = document.createElement('option');
-        if(keys[j] !== 'online'){
-          option.setAttribute('value',keys[j]);
-          option.textContent = `${keys[j]} - ${apLists[i][keys[j]].count}`;
+  var apLists = null;
+  try{
+    var response = await fetch('/?action=get_aps',{method:"POST"})
+    if(response.ok){
+      var { apLists } = await response.json();
+      for(var i = 0 ; i < apLists.length ; i++){
+        var currentSelect = document.getElementById(`prey${i}-ssid-select`);
+        var select = document.createElement('select');
+        select.setAttribute('class', "form-select my-1");
+        select.setAttribute('id',`prey${i}-ssid-select`);
+        for(var k = 0 ; k < networkSSIDs.length; k++){
+           var option = document.createElement('option');
+          option.setAttribute('value', networkSSIDs[k]);
+          option.textContent = networkSSIDs[k];
           select.appendChild(option);
         }
+        var keys = Object.keys(apLists[i]);
+        if (apLists[i].online){
+          for(var j = 0 ; j < keys.length; j++){
+            option = document.createElement('option');
+            if(keys[j] !== 'online'){
+              option.setAttribute('value',keys[j]);
+              option.textContent = `${keys[j]} - ${apLists[i][keys[j]].count}`;
+              select.appendChild(option);
+            }
+          }
+        } else {
+          option = document.createElement('option');
+          option.textContent = 'unreachable';
+          select.appendChild(option);
+          select.disabled = true;
+        }
+        select.selectedIndex = 0;
+        currentSelect.replaceWith(select);
       }
-    } else {
-      option = document.createElement('option');
-      option.textContent = 'unreachable';
-      select.appendChild(option);
-      select.disabled = true;
     }
-    select.selectedIndex = 0;
-    currentSelect.replaceWith(select);
+  } catch(error){
+    console.error(error);
+  } finally{
+    return apLists;
   }
-  return apLists;
 }
 
 async function fetchStates(){
-  var response = await fetch('/?action=get_states',{method:"POST"})
-  var { states } = await response.json();
-  for(var i = 0 ; i < states.length ; i++){
-    if (states[i].online){
-      document.getElementById(`prey${i}-print-toggle`).checked = states[i].print;
-      document.getElementById(`prey${i}-color-toggle`).checked = states[i].color;
-      document.getElementById(`prey${i}-character-toggle`).checked = states[i].control_characters;
-      document.getElementById(`prey${i}-color-shift-range`).value = states[i].color_shift;
-      document.getElementById(`prey${i}-color-shift`).textContent = states[i].color_shift;
-      document.getElementById(`prey${i}-monitor-toggle`).checked = states[i].wlan1_monitor_mode;
-      document.getElementById(`prey${i}-channel-range`).value = states[i].wlan1_channel;
-      document.getElementById(`prey${i}-channel`).textContent = states[i].wlan1_channel;
-      document.getElementById(`prey${i}-title`).textContent = states[i].ip;
-    } else {
-      document.getElementById(`prey${i}-title`).textContent = "unreachable";
+  try{
+    var response = await fetch('/?action=get_states',{method:"POST"})
+    if(response.ok){
+      var { states } = await response.json();
+      for(var i = 0 ; i < states.length ; i++){
+        if (states[i].online){
+          document.getElementById(`prey${i}-print-toggle`).checked = states[i].print;
+          document.getElementById(`prey${i}-color-toggle`).checked = states[i].color;
+          document.getElementById(`prey${i}-character-toggle`).checked = states[i].control_characters;
+          document.getElementById(`prey${i}-color-shift-range`).value = states[i].color_shift;
+          document.getElementById(`prey${i}-color-shift`).textContent = states[i].color_shift;
+          document.getElementById(`prey${i}-monitor-toggle`).checked = states[i].wlan1_monitor_mode;
+          document.getElementById(`prey${i}-channel-range`).value = states[i].wlan1_channel;
+          document.getElementById(`prey${i}-channel`).textContent = states[i].wlan1_channel;
+          document.getElementById(`prey${i}-title`).textContent = states[i].ip;
+        } else {
+          document.getElementById(`prey${i}-title`).textContent = "unreachable";
+        }
+      }
     }
-    
+  } catch(error){
+    console.error(error);
+  }
+}
+
+async function updateNetworkList(){
+  var networks = await fetchNetworks();
+  if(networks){
+    var select = document.getElementById('networks-select');
+    for (var i = select.options.length - 1; i >=0; i--){
+      select.options[i].remove();
+    }
+    for(var ifName in networks){
+      var option = document.createElement('option');
+      option.setAttribute('value',networks[ifName]);
+      option.textContent=`${ifName}:${networks[ifName]}`;
+      select.appendChild(option);
+    }
   }
 }
 
@@ -100,9 +147,36 @@ function initControlPanel(){
 
   // EVENT LISTENERS
   document
-    .getElementById(`update-status`)
+    .getElementById(`networks-button`)
     .addEventListener('click', async (e) => {
-      await fetchStates();
+      await updateNetworkList();
+    });
+
+   document
+    .getElementById(`targets-button`)
+    .addEventListener('click', async (e) => {
+      try{
+        e.target.textContent='working';
+        e.target.disabled=true;
+        var network = document.getElementById('networks-select').value;
+        if(network){
+          var response = await fetch(`/?action=get_targets&network=${network}`,{method:'POST'})
+          if(response.ok){
+            var { targets } = await response.json()
+            console.log(targets);
+            if(targets){
+              // console.log(targets);
+            } else{
+              // console.log('no targets');
+            }
+          }
+        }
+      } catch(error){
+        console.error(error)
+      } finally {
+        e.target.textContent='targets';
+        e.target.disabled=false;
+      }
     });
 
   // AP Refresh buttons

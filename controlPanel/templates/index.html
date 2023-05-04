@@ -19,16 +19,25 @@
         <div class="row justify-content-center gx-0 m-1 border border-dark border-1 rounded" id="master-panel">
           <div class="col mx-1  p-3" id="master-settings">
             <div class="row justify-content-center align-items-center">
-              <div class="col-3">
-                <button class="btn btn-sm btn-outline-secondary mx-1" id="update-status">
-                    refresh
-                </button>
-              </div>
-              <div class="col-9">
-                <p class="text-center h4">Master Settings</p>
-              </div>
+              <p class="text-center h4">Master Settings</p>
             </div>
             <hr>
+            <div class="row align-items-center">
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary mx-1" id="networks-button">
+                    networks
+                </button>
+              </div>
+              <div class="col">
+                <select class="form-select my-1" id="networks-select">
+                </select>
+              </div>
+              <div class="col">
+                <button class="btn btn-sm btn-outline-secondary mx-1" id="targets-button">
+                    targets
+                </button>
+              </div>
+            </div>
             <div class="row">
               <div class="col">
                 <div class="d-inline-block form-check form-switch">
@@ -1018,7 +1027,6 @@
               </div>
             </div>
           </div>
-
 
         </div>
       </div>
