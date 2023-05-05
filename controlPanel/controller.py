@@ -215,7 +215,6 @@ class MainHandler(RequestHandler):
 		self.render('index.html')
 	async def post(self):
 		action = self.get_query_argument('action',None)
-		
 		if action == 'get_networks':
 			networks = availableNetworks()
 			self.write(networks)
@@ -235,69 +234,77 @@ class MainHandler(RequestHandler):
 					self.set_status(404)
 			else:
 				self.set_status(404)
-		elif action == 'get_states':
-			targets = self.get_body_argument('targets', None)
-			if not targets:
-				self.set_status(404)
+		elif action == 'get_state':
+			target=None
+			try:
+				body = json.loads(self.request.body.decode('utf-8'))
+				if 'target' in body:
+					target = body['target']
+			except:
+				print('While parsing request:', e)
+				self.set_status(400)
 				return
-			states = {'states':[]}
+			print('target: %s' % target)
+			
 			state = {}
-			for ip in targets:
-				url = 'http://%s/?resource=state' % ip
-				try:
-					response = await IOLoop.current().run_in_executor(
-						None,
-						lambda: session.get(url,timeout=(2,2))
-					)
-					state = response.json()
-					state['online']=True
-				except:
-					state['online']=False
-					pass
-				state['ip']=ip
-				states['states'].append(state)
-			self.write(states)
+			url = 'http://%s/?resource=state' % target
+			try:
+				response = await IOLoop.current().run_in_executor(
+					None,
+					lambda: session.get(url,timeout=(2,2))
+				)
+				state = response.json()
+				state['online']=True
+			except:
+				state['online']=False
+				pass
+			print('state of target:%s - %s' % (target, repr(state)))
+			self.write(state)
 		elif action == 'get_aps':
-			targets = self.get_body_argument('targets', None)
-			if not targets:
-				self.set_status(404)
+			target=None
+			try:
+				body = json.loads(self.request.body.decode('utf-8'))
+				if 'target' in body:
+					target = body['target']
+			except:
+				print('While parsing request:', e)
+				self.set_status(400)
 				return
-			apLists = {'apLists':[]}
-			aplist = {}
-			for ip in targets:
-				url = 'http://%s/?resource=aps' % ip
-				try:
-					response = await IOLoop.current().run_in_executor(
-						None,
-						lambda: session.get(url,timeout=(2,2))
-					)
-					aplist = response.json()
-					aplist['online']=True
-				except:
-					aplist['online']=False
-					pass
-				apLists['apLists'].append(aplist)
-			self.write(apLists)
+			print('target: %s' % target)
+			aps = {}
+			url = 'http://%s/?resource=aps' % target
+			try:
+				response = await IOLoop.current().run_in_executor(
+					None,
+					lambda: session.get(url,timeout=(2,2))
+				)
+				aps['aps'] = response.json()
+				aps['online']=True
+			except:
+				aps['online']=False
+				pass
+			print('aps sniffed on target %s - %s' % (target,repr(aps)))
+			self.write(aps)
 		else:
 			try:
 				request = json.loads(self.request.body.decode('utf-8'))
 			except Exception as e:
 				print('While parsing request:', e)
 				self.set_status(400)
-
+				return
 			if 'set' in request:
 				try:
-					url = 'http://%s' % targets[request['target']]
+					url = 'http://%s' % request['target']
 					data = { "set" : request['set'] }
-					IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
+					await IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
 				except Exception as e:
 					self.set_status(500)
-					print('Setting parameters for %s:' % parameters['target'], e)
+					print('Setting parameters for %s:' % request['target'], e)
 			elif 'command' in request:
 				parameters={}
 				try:
 					command = request['command']
-					target = targets[int(request['target'])]
+					target = request['target']
 					parameters = request['parameters']
 					parameters['target'] = target
 				except Exception as e:
