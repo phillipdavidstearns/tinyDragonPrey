@@ -114,7 +114,8 @@ async function updateStatus(target_ip){
     );
     if(response.ok){
       var state = await response.json();
-        if (state.online){
+        console.log('state:',state);
+        if (state){
           document.getElementById(`${target_ip}-print-toggle`).checked = state.print;
           document.getElementById(`${target_ip}-color-toggle`).checked = state.color;
           document.getElementById(`${target_ip}-character-toggle`).checked = state.control_characters;

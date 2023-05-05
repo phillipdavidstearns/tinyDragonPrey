@@ -312,16 +312,18 @@ class Writer(Thread):
     while self.doRun:
       self.printBuffers()
       sleep(0.0001)
+    subprocess.run(
+      ["reset"]
+    )
+    self.join()
 
   def stop(self):
     print('[WRITER] stop()')
     self.doRun=False
-    self.join()
-    subprocess.run(
-      ["reset"]
-    )
-
-
+    # self.join()
+    # subprocess.run(
+    #   ["reset"]
+    # )
 
 #===========================================================================
 # Audifer
