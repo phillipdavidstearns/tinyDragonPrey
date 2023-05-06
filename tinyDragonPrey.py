@@ -210,11 +210,15 @@ class MainHandler(RequestHandler):
   async def get(self):
     resource = self.get_query_argument('resource', None)
     if resource == "state":
+      writerState = await IOLoop.current().run_in_executor(
+        None,
+        lambda: tinyDragon.writer.getState()
+      )
       state={
-        "print" : tinyDragon.writer.enabled,
-        "color" : tinyDragon.writer.color,
-        "control_characters" : tinyDragon.writer.control_characters,
-        "color_shift" : tinyDragon.writer.shift,
+        "print" : writerState['enabled'],
+        "color" : writerState['color'],
+        "control_characters" : writerState['control_characters'],
+        "color_shift" : writerState['shift'],
         "wlan1_monitor_mode" : checkWlan1Mode(),
         "wlan1_channel" : checkWlan1Channel()
       }
@@ -235,13 +239,25 @@ class MainHandler(RequestHandler):
         parameter = command['set']['parameter']
         value = command['set']['value']
         if parameter == "print":
-          tinyDragon.writer.enabled = value
+          await IOLoop.current().run_in_executor(
+            None,
+            lambda: tinyDragon.writer.printEnable(value)
+          )
         elif parameter == "color":
-          tinyDragon.writer.color = value
+          await IOLoop.current().run_in_executor(
+            None,
+            lambda: tinyDragon.writer.colorEnable(value)
+          )
         elif parameter == "control_characters":
-          tinyDragon.writer.control_characters = value
+          await IOLoop.current().run_in_executor(
+            None,
+            lambda: tinyDragon.writer.ctlCharactersEnable(value)
+          )
         elif parameter == "color_shift":
-          tinyDragon.writer.shift = int(value)
+          await IOLoop.current().run_in_executor(
+            None,
+            lambda: tinyDragon.writer.setColorShift(int(value))
+          )
         elif parameter == "wlan1_monitor_mode":
           global wlan1_monitor_mode
           wlan1_monitor_mode = value
@@ -274,12 +290,13 @@ class MainHandler(RequestHandler):
         if action == 'start_ap':
           IOLoop.current().run_in_executor(
             None,
-            lambda: startRogueAP(command['parameters'])
+            startRogueAP,
+            command['parameters']
           )
         elif action == 'stop_ap':
           IOLoop.current().run_in_executor(
             None,
-            lambda: stopRogueAP()
+            stopRogueAP
           )
 
 #===========================================================================
@@ -327,14 +344,13 @@ if __name__ == "__main__":
     wlan1_monitor_mode = checkWlan1Mode()
     wlan1_channel = checkWlan1Channel()
 
-    tinyDragon.start()
-
     # run the main loop
     getLogger('tornado.access').disabled = True
     application = make_app()
     http_server = HTTPServer(application)
     http_server.listen(80)
     main_loop = IOLoop.current()
+    main_loop.run_in_executor(None, tinyDragon.start)
     main_loop.start()
   except Exception as e:
     print('Ooops!',e)

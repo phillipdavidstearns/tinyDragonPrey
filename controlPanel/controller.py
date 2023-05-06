@@ -296,7 +296,13 @@ class MainHandler(RequestHandler):
 				try:
 					url = 'http://%s' % request['target']
 					data = { "set" : request['set'] }
-					await IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
+					await IOLoop.current().run_in_executor(
+						None,
+						lambda: session.post(
+							url=url,
+							data=json.dumps(data)
+						)
+					)
 				except Exception as e:
 					self.set_status(500)
 					print('Setting parameters for %s:' % request['target'], e)
@@ -308,7 +314,7 @@ class MainHandler(RequestHandler):
 					parameters = request['parameters']
 					parameters['target'] = target
 				except Exception as e:
-					print('error parsing command:',e)
+					print('error parsing command:%s - %s'% (repr(e), repr(request)))
 				if command == 'nping_icmp_oneshot':
 					nping_icmp_oneshot(parameters)
 				elif command == 'nping_icmp_flood':

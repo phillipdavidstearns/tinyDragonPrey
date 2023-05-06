@@ -519,18 +519,18 @@ function createPanel(id){
         floodDelayRangeLabel.setAttribute('for',`${id}-message-flood-delay-range`);
         floodDelayRangeLabel.textContent='delay';
         var floodDelayRange = range.cloneNode();
-        floodDelayRange.setAttribute('class','form-range w-50');
-        floodDelayRange.setAttribute('min','0.01');
-        floodDelayRange.setAttribute('max','2.5');
-        floodDelayRange.setAttribute('step','0.01');
-        floodDelayRange.setAttribute('value','0.5');
+        floodDelayRange.setAttribute('class','form-range w-75');
+        floodDelayRange.setAttribute('min','0.0');
+        floodDelayRange.setAttribute('max','1.0');
+        floodDelayRange.setAttribute('step','0.001');
+        floodDelayRange.setAttribute('value','0.500');
         floodDelayRange.setAttribute('id',`${id}-message-flood-delay-range`);
         floodDelayRange.addEventListener('input', async (e) => {
-          document.getElementById(`${id}-message-flood-delay`).textContent = e.target.value;
+          document.getElementById(`${id}-message-flood-delay`).textContent = parseFloat(e.target.value).toFixed(3);
         });
         var floodDelayIndicator = document.createElement('span');
         floodDelayIndicator.setAttribute('id',`${id}-message-flood-delay`);
-        floodDelayIndicator.textContent='0.5';
+        floodDelayIndicator.textContent='0.500';
       floodDelayCol.appendChild(floodDelayRangeLabel);
       floodDelayCol.appendChild(floodDelayRange);
       floodDelayCol.appendChild(floodDelayIndicator);
@@ -540,7 +540,7 @@ function createPanel(id){
         floodCountRangeLabel.setAttribute('for',`${id}-message-flood-count-range`);
         floodCountRangeLabel.textContent='count';
         var floodCountRange = range.cloneNode();
-        floodCountRange.setAttribute('class','form-range w-50');
+        floodCountRange.setAttribute('class','form-range w-75');
         floodCountRange.setAttribute('min','1');
         floodCountRange.setAttribute('max','100');
         floodCountRange.setAttribute('step','1');
@@ -655,7 +655,7 @@ function createPanel(id){
         freqNumber.setAttribute('max','10000');
         freqNumber.setAttribute('value','1000');
         freqNumber.setAttribute('id',`${id}-frequency`);
-        freqNumber.addEventListener('input', async (e) => {
+        freqNumber.addEventListener('change', async (e) => {
           document.getElementById(`${id}-frequency-range`).value = e.target.value;
         });
       freqNumberCol.appendChild(freqNumber);
@@ -703,7 +703,7 @@ function createPanel(id){
         durationNumber.setAttribute('max','8164');
         durationNumber.setAttribute('value','500');
         durationNumber.setAttribute('id',`${id}-duration`);
-        durationNumber.addEventListener('input', async (e) => {
+        durationNumber.addEventListener('change', async (e) => {
           document.getElementById(`${id}-duration-range`).value = e.target.value;
         });
       durationNumberCol.appendChild(durationNumber);
@@ -749,7 +749,7 @@ function createPanel(id){
         toneIntervalNumber.setAttribute('max','2500');
         toneIntervalNumber.setAttribute('value','1000');
         toneIntervalNumber.setAttribute('id',`${id}-tone-interval`);
-        toneIntervalNumber.addEventListener('input', async (e) => {
+        toneIntervalNumber.addEventListener('change', async (e) => {
           document.getElementById(`${id}-tone-interval-range`).value = e.target.value;
         });
       toneIntervalNumberCol.appendChild(toneIntervalNumber);
@@ -1075,20 +1075,23 @@ function initControlPanel(){
       e.target.disabled=true;
       var network = document.getElementById('networks-select').value;
       if(network){
-        var response = await fetch(`/?action=get_targets&network=${network}`,{method:'POST'})
+        var parent = document.getElementById('target-panels');
+        const response = await fetch(`/?action=get_targets&network=${network}`,{method:'POST'})
         if(response.ok){
-          var parent = document.getElementById('target-panels');
           while (parent.hasChildNodes()){
             parent.firstChild.remove();
           }
-        }
-        var { targets } = await response.json();
-        targetList = targets;
-        var panel;
-        for(var i = 0; i < targets.length; i++){
-          panel = createPanel(targets[i].ip);
-          parent.appendChild(panel);
-          await updateStatus(targets[i].ip);
+          var { targets } = await response.json();
+          targetList = targets;
+          var panel;
+          for(var i = 0; i < targets.length; i++){
+            panel = createPanel(targets[i].ip);
+            parent.appendChild(panel);
+            await updateStatus(targets[i].ip);
+          }
+          parent.hidden = false;
+        } else {
+          parent.hidden = true;
         }
       }
     } catch(error){
@@ -1243,7 +1246,7 @@ document
 document
   .getElementById('master-message-flood-delay-range')
   .addEventListener('input', async (e) => {
-    document.getElementById('master-message-flood-delay').textContent = e.target.value;
+    document.getElementById('master-message-flood-delay').textContent = parseFloat(e.target.value).toFixed(3);
   });
 document
   .getElementById('master-message-flood-count-range')
@@ -1277,12 +1280,12 @@ document
 
 document
   .getElementById('master-frequency')
-  .addEventListener('input', async (e) => {
+  .addEventListener('change', async (e) => {
     document.getElementById('master-frequency-range').value = e.target.value;
   });
 document
   .getElementById('master-duration')
-  .addEventListener('input', async (e) => {
+  .addEventListener('change', async (e) => {
     document.getElementById('master-duration-range').value = e.target.value;
   });
 document
@@ -1303,7 +1306,7 @@ document
     var shape = document.getElementById('master-shape-select').value;
     for(var i = 0; i < targetList.length ;i++){
       var command = {
-        "target" : targetList[i].id,
+        "target" : targetList[i].ip,
         "command" : "tone",
         "parameters" : {
           "frequency":frequency,
