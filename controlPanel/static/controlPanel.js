@@ -118,7 +118,7 @@ async function updateStatus(target_ip){
         if (state){
           document.getElementById(`${target_ip}-print-toggle`).checked = state.print;
           document.getElementById(`${target_ip}-color-toggle`).checked = state.color;
-          document.getElementById(`${target_ip}-character-toggle`).checked = state.control_characters;
+          document.getElementById(`${target_ip}-linebreaks-toggle`).checked = state.linebreaks;
           document.getElementById(`${target_ip}-color-shift-range`).value = state.color_shift;
           document.getElementById(`${target_ip}-color-shift`).textContent = state.color_shift;
           document.getElementById(`${target_ip}-monitor-toggle`).checked = state.wlan1_monitor_mode;
@@ -166,25 +166,26 @@ function createPanel(id){
   formCheckDiv.setAttribute('class','form-check');
 
   var toggle = document.createElement('input');
-  toggle.setAttribute('class', 'form-check-input');
+  toggle.setAttribute('class', 'form-check-input m-1');
   toggle.setAttribute('type', 'checkbox');
 
   var hr = document.createElement('hr');
 
   var formCheckLabel = document.createElement('label');
-  formCheckLabel.setAttribute('class','form-check-label');
+  formCheckLabel.setAttribute('class','form-check-label m-1');
 
   var formLabel = document.createElement('label');
-  formLabel.setAttribute('class','form-label');
+  formLabel.setAttribute('class','form-label m-1');
 
   var range = document.createElement('input');
   range.setAttribute('type', 'range');
+  range.setAttribute('class', 'form-range m-1');
 
   var button = document.createElement('button');
-  button.setAttribute('class', 'btn btn-sm btn-outline-secondary my-1');
+  button.setAttribute('class', 'btn btn-sm btn-outline-secondary m-1');
 
   var select = document.createElement('select');
-  select.setAttribute('class','form-select mb-1');
+  select.setAttribute('class','form-select m-1');
 
   //---Construction---
   var panel = document.createElement('div');
@@ -223,12 +224,12 @@ function createPanel(id){
       var charactersCol = col.cloneNode();
         var charactersToggleDiv = formToggleDiv.cloneNode();
           var charactersToggle = toggle.cloneNode();
-          charactersToggle.setAttribute('id',`${id}-character-toggle`);
+          charactersToggle.setAttribute('id',`${id}-linebreaks-toggle`);
           charactersToggle.addEventListener('change', async (e) => {
             var command = {
               "target" : id,
               "set" : {
-                "parameter" : "control_characters",
+                "parameter" : "linebreaks",
                 "value" : e.target.checked
               }
             };
@@ -238,7 +239,7 @@ function createPanel(id){
             });
           });
           var charactersToggleLabel = formCheckLabel.cloneNode();
-          charactersToggleLabel.setAttribute('for',`${id}-character-toggle`);
+          charactersToggleLabel.setAttribute('for',`${id}-linebreaks-toggle`);
           charactersToggleLabel.textContent =`special chars`;
         charactersToggleDiv.appendChild(charactersToggle);
         charactersToggleDiv.appendChild(charactersToggleLabel);
@@ -336,7 +337,7 @@ function createPanel(id){
           });
           var colorShiftIntervalToggleLabel = formCheckLabel.cloneNode();
           colorShiftIntervalToggleLabel.setAttribute('for',`${id}-shift-interval-toggle`);
-          colorShiftIntervalToggleLabel.textContent = `retrigger`;
+          colorShiftIntervalToggleLabel.textContent = 'repeat';
         colorShiftIntervalToggleDiv.appendChild(colorShiftIntervalToggle);
         colorShiftIntervalToggleDiv.appendChild(colorShiftIntervalToggleLabel);
       colorShiftIntervalToggleCol.appendChild(colorShiftIntervalToggleDiv);
@@ -434,7 +435,7 @@ function createPanel(id){
           });
           var wifiIntervalToggleLabel = formCheckLabel.cloneNode();
           wifiIntervalToggleLabel.setAttribute('for',`${id}-channel-interval-toggle`);
-          wifiIntervalToggleLabel.textContent=`retrigger`;
+          wifiIntervalToggleLabel.textContent='repeat';
         wifiIntervalToggleDiv.appendChild(wifiIntervalToggle);
         wifiIntervalToggleDiv.appendChild(wifiIntervalToggleLabel);
       wifiIntervalToggleCol.appendChild(wifiIntervalToggleDiv);
@@ -506,7 +507,7 @@ function createPanel(id){
           });
           var messageIntervalToggleLabel = formCheckLabel.cloneNode();
           messageIntervalToggleLabel.setAttribute('for',`${id}-message-interval-toggle`);
-          messageIntervalToggleLabel.textContent=`retrigger`;
+          messageIntervalToggleLabel.textContent='repeat';
         messageIntervalToggleDiv.appendChild(messageIntervalToggle);
         messageIntervalToggleDiv.appendChild(messageIntervalToggleLabel);
       messageIntervalToggleCol.appendChild(messageIntervalToggleDiv);
@@ -764,7 +765,7 @@ function createPanel(id){
           });
           var toneIntervalToggleLabel = formCheckLabel.cloneNode();
           toneIntervalToggleLabel.setAttribute('for',`${id}-tone-interval-toggle`);
-          toneIntervalToggleLabel.textContent=`retrigger`;
+          toneIntervalToggleLabel.textContent='repeat';
           
         toneIntervalToggleDiv.appendChild(toneIntervalToggle);
         toneIntervalToggleDiv.appendChild(toneIntervalToggleLabel);
@@ -1106,11 +1107,13 @@ function initControlPanel(){
 document
   .getElementById('master-print-toggle')
   .addEventListener('change', async (e) => {
-    var toggle;
-    for(var i = 0; i < targetList.length; i++){
-      toggle = document.getElementById(`${targetList[i].ip}-print-toggle`);
-      toggle.checked = e.target.checked;
-      toggle.dispatchEvent(new Event('change'));
+    if(targetList){
+      var toggle;
+      for(var i = 0; i < targetList.length; i++){
+        toggle = document.getElementById(`${targetList[i].ip}-print-toggle`);
+        toggle.checked = e.target.checked;
+        toggle.dispatchEvent(new Event('change'));
+      }
     }
   });
 
@@ -1118,23 +1121,27 @@ document
 document
   .getElementById('master-color-toggle')
   .addEventListener('change', async (e) => {
-    var toggle;
-    for(var i = 0; i < targetList.length; i++){
-      toggle = document.getElementById(`${targetList[i].ip}-color-toggle`);
-      toggle.checked = e.target.checked;
-      toggle.dispatchEvent(new Event('change'));
+    if(targetList){
+      var toggle;
+      for(var i = 0; i < targetList.length; i++){
+        toggle = document.getElementById(`${targetList[i].ip}-color-toggle`);
+        toggle.checked = e.target.checked;
+        toggle.dispatchEvent(new Event('change'));
+      }
     }
   });
 
 //MASTER SPECIAL CHARACTERS
 document
-  .getElementById('master-character-toggle')
+  .getElementById('master-linebreaks-toggle')
   .addEventListener('change', async (e) => {
-    var toggle;
-    for(var i = 0; i < targetList.length; i++){
-      toggle = document.getElementById(`${targetList[i].ip}-character-toggle`);
-      toggle.checked = e.target.checked;
-      toggle.dispatchEvent(new Event('change'));
+    if(targetList){
+      var toggle;
+      for(var i = 0; i < targetList.length; i++){
+        toggle = document.getElementById(`${targetList[i].ip}-linebreaks-toggle`);
+        toggle.checked = e.target.checked;
+        toggle.dispatchEvent(new Event('change'));
+      }
     }
   });
 
@@ -1143,11 +1150,13 @@ document
   .getElementById('master-color-shift-range')
   .addEventListener('input', async (e) => {
     document.getElementById('master-color-shift').textContent = e.target.value;
-    var range;
-    for(var i = 0; i < targetList.length; i++){
-      range = document.getElementById(`${targetList[i].ip}-color-shift-range`);
-      range.value = e.target.value;
-      range.dispatchEvent(new Event('input'));
+    if(targetList){
+      var range;
+      for(var i = 0; i < targetList.length; i++){
+        range = document.getElementById(`${targetList[i].ip}-color-shift-range`);
+        range.value = e.target.value;
+        range.dispatchEvent(new Event('input'));
+      }
     }
   });
 
@@ -1169,12 +1178,14 @@ document
 document
   .getElementById('master-monitor-toggle')
   .addEventListener('change', async (e) => {
-    for(var i = 0; i < targetList.length; i++){
-      var toggle;
-      toggle = document.getElementById(`${targetList[i].ip}-monitor-toggle`);
-      if(toggle.disabled == false){
-        toggle.checked = e.target.checked;
-        toggle.dispatchEvent(new Event('change'));
+    if(targetList){
+      for(var i = 0; i < targetList.length; i++){
+        var toggle;
+        toggle = document.getElementById(`${targetList[i].ip}-monitor-toggle`);
+        if(toggle.disabled == false){
+          toggle.checked = e.target.checked;
+          toggle.dispatchEvent(new Event('change'));
+        }
       }
     }
   });
@@ -1184,11 +1195,13 @@ document
   .getElementById('master-channel-range')
   .addEventListener('input', async (e) => {
     document.getElementById('master-channel').textContent = e.target.value;
-    for(var i = 0; i < targetList.length; i++){
-      var range = document.getElementById(`${targetList[i].ip}-channel-range`);
-      if(range.disabled == false ){
-        range.value = e.target.value;
-        range.dispatchEvent(new Event('input'));
+    if(targetList){
+      for(var i = 0; i < targetList.length; i++){
+        var range = document.getElementById(`${targetList[i].ip}-channel-range`);
+        if(range.disabled == false ){
+          range.value = e.target.value;
+          range.dispatchEvent(new Event('input'));
+        }
       }
     }
   });
@@ -1212,18 +1225,20 @@ document
   .getElementById('master-message-button')
   .addEventListener('click', async (e) => {
     var message = document.getElementById('master-message-content').value
-    for(var i = 0; i < targetList.length; i++){
-      var command = {
-        "target" : targetList[i].ip,
-        "command" : "nping_icmp_oneshot",
-        "parameters" : {
-          "message" : message
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
+    if(targetList){
+      for(var i = 0; i < targetList.length; i++){
+        var command = {
+          "target" : targetList[i].ip,
+          "command" : "nping_icmp_oneshot",
+          "parameters" : {
+            "message" : message
+          }
+        };
+        fetch('/', {
+          method: "POST",
+          body: JSON.stringify(command)
+        });
+      }
     }
   });
 
@@ -1231,7 +1246,7 @@ document
 document
   .getElementById('master-message-interval-range')
   .addEventListener('input', async (e) => {
-    document.getElementById('master-message-interval').value = e.target.value;
+    document.getElementById('master-message-interval').textContent = e.target.value;
   });
 document
   .getElementById('master-message-interval-toggle')
@@ -1256,23 +1271,25 @@ document
 document
   .getElementById('master-message-flood-button')
   .addEventListener('click', async (e) => {
-    var message = document.getElementById('master-message-content').value;
-    var delay = document.getElementById('master-message-flood-delay-range').value;
-    var count = document.getElementById('master-message-flood-count-range').value;
-    for(var i = 0; i < targetList.length; i++){
-      var command = {
-        "target" : targetList[i].ip,
-        "command" : "nping_icmp_flood",
-        "parameters" : {
-          "message" : message,
-          "delay" : delay,
-          "count" : count
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
+    if(targetList){
+      var message = document.getElementById('master-message-content').value;
+      var delay = document.getElementById('master-message-flood-delay-range').value;
+      var count = document.getElementById('master-message-flood-count-range').value;
+      for(var i = 0; i < targetList.length; i++){
+        var command = {
+          "target" : targetList[i].ip,
+          "command" : "nping_icmp_flood",
+          "parameters" : {
+            "message" : message,
+            "delay" : delay,
+            "count" : count
+          }
+        };
+        fetch('/', {
+          method: "POST",
+          body: JSON.stringify(command)
+        });
+      }
     }
   });
 
@@ -1301,24 +1318,26 @@ document
 document
   .getElementById('master-tone-button')
   .addEventListener('click', async (e) => {
-    var frequency = document.getElementById('master-frequency-range').value;
-    var duration = document.getElementById('master-duration-range').value;
-    var shape = document.getElementById('master-shape-select').value;
-    for(var i = 0; i < targetList.length ;i++){
-      var command = {
-        "target" : targetList[i].ip,
-        "command" : "tone",
-        "parameters" : {
-          "frequency":frequency,
-          "amplitude":1.0,
-          "duration":duration,
-          "shape":shape
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
+    if(targetList){
+      var frequency = document.getElementById('master-frequency-range').value;
+      var duration = document.getElementById('master-duration-range').value;
+      var shape = document.getElementById('master-shape-select').value;
+      for(var i = 0; i < targetList.length ;i++){
+        var command = {
+          "target" : targetList[i].ip,
+          "command" : "tone",
+          "parameters" : {
+            "frequency":frequency,
+            "amplitude":1.0,
+            "duration":duration,
+            "shape":shape
+          }
+        };
+        fetch('/', {
+          method: "POST",
+          body: JSON.stringify(command)
+        });
+      }
     }
   });
 document
@@ -1343,35 +1362,37 @@ document
 document
   .getElementById('master-nmap-button')
   .addEventListener('click', async (e) => {
-    var parameters = [];
-    parameters.push(document.getElementById('master-scan-mode-select').value);
-    if (document.getElementById('master-scan-option-sc').checked){
-      parameters.push("-sC");
-    }
-    if (document.getElementById('master-scan-option-sv').checked){
-      parameters.push("-sV");
-    }
-    if (document.getElementById('master-scan-option-sy').checked){
-      parameters.push("-sY");
-    }
-    if (document.getElementById('master-scan-option-sz').checked){
-      parameters.push("-sZ");
-    }
-    if (document.getElementById('master-scan-option-o').checked){
-      parameters.push("-O");
-    }
-    for(var i = 0; i < targetList.length ;i++){
-      var command = {
-        "target" : targetList[i].ip,
-        "command" : "scan",
-        "parameters" : {
-          "args": parameters
-        }
-      };
-      fetch('/', {
-        method: "POST",
-        body: JSON.stringify(command)
-      });
+      if(targetList){
+      var parameters = [];
+      parameters.push(document.getElementById('master-scan-mode-select').value);
+      if (document.getElementById('master-scan-option-sc').checked){
+        parameters.push("-sC");
+      }
+      if (document.getElementById('master-scan-option-sv').checked){
+        parameters.push("-sV");
+      }
+      if (document.getElementById('master-scan-option-sy').checked){
+        parameters.push("-sY");
+      }
+      if (document.getElementById('master-scan-option-sz').checked){
+        parameters.push("-sZ");
+      }
+      if (document.getElementById('master-scan-option-o').checked){
+        parameters.push("-O");
+      }
+      for(var i = 0; i < targetList.length ;i++){
+        var command = {
+          "target" : targetList[i].ip,
+          "command" : "scan",
+          "parameters" : {
+            "args": parameters
+          }
+        };
+        fetch('/', {
+          method: "POST",
+          body: JSON.stringify(command)
+        });
+      }
     }
   });
 }

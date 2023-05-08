@@ -14,6 +14,7 @@ import subprocess
 # temporary fix to exclude characters that might mess up the console output.
 # https://www.asciitable.com/
 # https://serverfault.com/questions/189520/which-characters-if-catd-will-mess-up-my-terminal-and-make-a-ton-of-noise
+
 excludedChars=[1,2,3,4,5,6,7,8,9,11,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,155,255]
 
 #===========================================================================
@@ -79,7 +80,7 @@ class Dragon(Thread):
         self.qtyChannels,
         self.chunk*self.qtyChannels,
         color=self.colorEnabled,
-        control_characters=self.ctlEnabled,
+        linebreaks=self.ctlEnabled,
         enabled=self.printEnabled
       )
       self.writer.start()
@@ -172,8 +173,8 @@ class Listener(Thread):
 
   def analyzePacket(self, pkt):
     AP = {}
-    SSID=None
-    MAC=None
+    SSID = None
+    MAC = None
     try:
       if pkt[25] >> 4 & 0b1111 == 0x4 and pkt[25] >> 2 & 0b11 ==0:
         if pkt[49] == 0 and pkt[50] > 0:
@@ -214,7 +215,7 @@ class Listener(Thread):
         data = self.sockets[i].recv(65535)
         if data:
           if self.interfaces[i] == 'wlan1' and self.logAPs:
-            AP = self.analyzePacket(data) # extract APs from 
+            AP = self.analyzePacket(data) # extract APs
             if AP:
               self.addToAPs(AP)
           with self.lock:
@@ -224,7 +225,6 @@ class Listener(Thread):
 
   def extractFrames(self, frames):
     with self.lock:
-      # places to put stuff...
       slices = [] # for making the chunk of audio data
       printQueue = [] # for assembling the data into chunks for printing
       for n in range(len(self.buffers)):
@@ -250,13 +250,16 @@ class Listener(Thread):
         self.readSockets()
         sleep(0.0001)
       except Exception as e:
-        print('[LISTENER] Error: %s' % repr(e))
+        print('[LISTENER] Error executing readSockets(): %s' % repr(e))
 
   def stop(self):
     print('[LISTENER] stop()')
     self.doRun=False
-    for socket in self.sockets:
-      socket.close()
+    try:
+      for socket in self.sockets:
+        socket.close()
+    except Exception as e:
+      print('While closing socket: %e' % repr(e))
     self.join()
 
 #===========================================================================
@@ -266,12 +269,12 @@ class Listener(Thread):
 # in the initialization portion of the script when run as standalone.
 
 class Writer(Thread):
-  def __init__(self, qtyChannels, chunkSize=4096, color=False, control_characters=True, enabled=False):
+  def __init__(self, qtyChannels, chunkSize=4096, color=False, linebreaks=True, enabled=False):
     self.lock=Lock()
     self.qtyChannels = qtyChannels # we need to know how many streams of data we'll be printing
     self.doRun = False
     self.color=color
-    self.control_characters=control_characters
+    self.linebreaks=linebreaks
     self.shift = 0
     self.enabled = enabled
     self.buffers = []
@@ -297,43 +300,41 @@ class Writer(Thread):
                 self.buffers[i]+=queueData[i]
 
   def printBuffers(self):
-      with self.lock:
-        for n in range(len(self.buffers)):
-          string = ''
-
-          if self.chunkSize > len(self.buffers[n]):
-            size = len(self.buffers[n])
-          else:
-            size = self.chunkSize
-
-          if size > 0:
-            for i in range(size):
-              char=chr(0)
-              val = self.buffers[n][i]
-
-              if self.control_characters:
-                TEST = True
-              else:
-                TEST = val > 31
-
-              if TEST and not val in excludedChars:
-                char = chr(val)
-              if self.color: # add the ANSI escape sequence to encode the background color to value of val
-                color = (val+self.shift+256)%256 # if we want to specify some amount of color shift...
-                string += '\x1b[48;5;%sm%s\x1b[0m' % (int(color), char)
-              else:
-                string += char
-            if self.enabled:
-              sys.stdout.write(string)
-              sys.stdout.flush()
-          self.buffers[n] = self.buffers[n][size:] # remove chunk from queue. will enmpty over time if disabled
+    for n in range(len(self.buffers)):
+      string = ''
+      with self.lock:      
+        if self.chunkSize > len(self.buffers[n]):
+          size = len(self.buffers[n])
+        else:
+          size = self.chunkSize
+        if size > 0:
+          for i in range(size):
+            char=chr(0)
+            val = self.buffers[n][i]
+            
+            if self.linebreaks:
+              TEST = True
+            else:
+              TEST = val > 31
+            
+            if TEST and not val in excludedChars:
+              char = chr(val)
+            if self.color: # add the ANSI escape sequence to encode the background color to value of val
+              color = (val+self.shift+256)%256 # if we want to specify some amount of color shift...
+              string += '\x1b[48;5;%sm%s\x1b[0m' % (int(color), char)
+            else:
+              string += char
+          if self.enabled:
+            sys.stdout.write(string)
+            sys.stdout.flush()
+        self.buffers[n] = self.buffers[n][size:] # remove chunk from queue. will enmpty over time if disabled
 
   def getState(self):
     with self.lock:
       state = {
         'enabled': self.enabled,
         'color': self.color,
-        'control_characters': self.control_characters,
+        'linebreaks': self.linebreaks,
         'shift': self.shift,
       }
       return state
@@ -355,9 +356,9 @@ class Writer(Thread):
   def ctlCharactersEnable(self, value):
     with self.lock:
       if value:
-        self.control_characters = True
+        self.linebreaks = True
       else:
-        self.control_characters = False
+        self.linebreaks = False
 
   def setColorShift(self, value):
     with self.lock:
@@ -375,14 +376,15 @@ class Writer(Thread):
         self.printBuffers()
         sleep(0.001)
       except Exception as e:
-        print('[WRITER] Error: %s' % repr(e))
+        print('[WRITER] Error while executing printBuffers(): %s' % repr(e))
 
   def stop(self):
     print('[WRITER] stop()')
     self.doRun=False
-    subprocess.run(
-      ["reset"]
-    )
+    # subprocess.run(
+    #   ["reset"]
+    # )
+    os.system('reset')
     self.join()
 
 #===========================================================================

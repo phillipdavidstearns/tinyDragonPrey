@@ -217,7 +217,7 @@ class MainHandler(RequestHandler):
       state={
         "print" : writerState['enabled'],
         "color" : writerState['color'],
-        "control_characters" : writerState['control_characters'],
+        "linebreaks" : writerState['linebreaks'],
         "color_shift" : writerState['shift'],
         "wlan1_monitor_mode" : checkWlan1Mode(),
         "wlan1_channel" : checkWlan1Channel()
@@ -248,7 +248,7 @@ class MainHandler(RequestHandler):
             None,
             lambda: tinyDragon.writer.colorEnable(value)
           )
-        elif parameter == "control_characters":
+        elif parameter == "linebreaks":
           await IOLoop.current().run_in_executor(
             None,
             lambda: tinyDragon.writer.ctlCharactersEnable(value)

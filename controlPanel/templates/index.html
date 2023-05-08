@@ -17,93 +17,96 @@
     <main>
       <div class="containter">
         <div class="row justify-content-center gx-0 m-1 border border-1 rounded" id="master-panel">
-          <div class="col mx-1  p-3" id="master-settings">
+          <div class="col mx-1 p-3" id="master-settings">
             <div class="row justify-content-center align-items-center">
               <p class="text-center h4">Master Settings</p>
             </div>
             <hr>
             <div class="row align-items-center m-auto">
-              <div class="col m-auto">
-                <button class="btn btn-sm btn-outline-secondary mx-1" id="networks-button">
+              <div class="col-3 text-center">
+                <button class="btn btn-sm btn-outline-secondary  m-1" id="networks-button">
                     networks
                 </button>
               </div>
-              <div class="col m-auto">
-                <select class="form-select my-1" id="networks-select">
+              <div class="col-6 text-center">
+                <select class="form-select m-1" id="networks-select">
                 </select>
               </div>
-              <div class="col">
-                <button class="btn btn-sm btn-outline-secondary mx-1" id="targets-button">
+              <div class="col-3 text-center">
+                <button class="btn btn-sm btn-outline-secondary  m-1" id="targets-button">
                     targets
                 </button>
               </div>
             </div>
-            <div class="row">
+            <div class="row align-items-center justify-content-center text-center">
+
               <div class="col">
                 <div class="d-inline-block form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="master-print-toggle">
-                  <label class="form-check-label" for="master-print-toggle">print</label>
+                  <input class="form-check-input m-1" type="checkbox" id="master-print-toggle">
+                  <label class="form-check-label m-1" for="master-print-toggle">print</label>
                 </div>
               </div>
             
               <div class="col">
                 <div class="d-inline-block form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="master-character-toggle">
-                  <label class="form-check-label" for="master-character-toggle">special chars</label>
+                  <input class="form-check-input m-1" type="checkbox" id="master-linebreaks-toggle">
+                  <label class="form-check-label m-1" for="master-linebreaks-toggle">special chars</label>
                 </div>
               </div>
             
               <div class="col">
                 <div class="d-inline-block form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="master-color-toggle">
-                  <label class="form-check-label" for="master-color-toggle">color</label>
+                  <input class="form-check-input m-1" type="checkbox" id="master-color-toggle">
+                  <label class="form-check-label m-1" for="master-color-toggle">color</label>
                 </div>
               </div>
             </div>
-            <div class="row">
+            <div class="row align-items-center justify-content-center text-center">
               <div class="col">
-                <label for="master-color-shift-range" class="form-label">color shift</label>
-                <input type="range" class="form-range w-75" min="0" max="255" step="1" id="master-color-shift-range" value="0">
+                <label for="master-color-shift-range" class="form-label m-1">color shift</label>
+                <input type="range" class="form-range w-75 m-1" min="0" max="255" step="1" id="master-color-shift-range" value="0">
                 <span id="master-color-shift">0</span>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
+
+            <div class="row align-items-center justify-content-center text-center">
+              <div class="col-8">
                 <label for="master-shift-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="25" max="2500" step="1" id="master-shift-interval-range" value="1000">
+                <input type="range" class="form-range w-50 m-1" min="25" max="2500" step="1" id="master-shift-interval-range" value="1000">
                 <span id="master-shift-interval">1000</span>
               </div>
-              <div class="col">
+              <div class="col-4">
                 <div class="d-inline-block form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="master-shift-interval-toggle">
-                  <label class="form-check-label" for="master-shift-interval-toggle">retrigger</label>
+                  <input class="form-check-input m-1" type="checkbox" id="master-shift-interval-toggle">
+                  <label class="form-check-label m-1" for="master-shift-interval-toggle">repeat</label>
                 </div>
               </div>
             </div>
+
             <hr>
-            <div class="row">
+            <div class="row align-items-center justify-content-center text-center">
               <div class="col">
                 <div class="d-inline-block form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="master-monitor-toggle">
-                  <label class="form-check-label" for="master-monitor-toggle">monitor mode</label>
+                  <input class="form-check-input m-1" type="checkbox" id="master-monitor-toggle">
+                  <label class="form-check-label m-1" for="master-monitor-toggle">monitor mode</label>
                 </div>
               </div>
               <div class="col">
-                <label for="master-channel-range" class="form-label">wifi channel</label>
-                <input type="range" class="form-range" min="1" max="13" step="1" id="master-channel-range" value="1">
+                <label for="master-channel-range" class="form-label m-1">wifi channel</label>
+                <input type="range" class="form-range m-1" min="1" max="13" step="1" id="master-channel-range" value="1">
                 <span id="master-channel">1</span>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col">
+            <div class="row align-items-center justify-content-center text-center">
+              <div class="col-8">
                 <label for="master-channel-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="25" max="2500" step="1" id="master-channel-interval-range" value="1000">
+                <input type="range" class="form-range w-50 m-1" min="25" max="2500" step="1" id="master-channel-interval-range" value="1000">
                 <span id="master-channel-interval">1000</span>
               </div>
-              <div class="col">
+              <div class="col-4">
                 <div class="d-inline-block form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="master-channel-interval-toggle">
-                  <label class="form-check-label" for="master-channel-interval-toggle">retrigger</label>
+                  <input class="form-check-input m-1" type="checkbox" id="master-channel-interval-toggle">
+                  <label class="form-check-label m-1" for="master-channel-interval-toggle">repeat</label>
                 </div>
               </div>
             </div>
@@ -112,42 +115,42 @@
             <p class="text-center h4">Master Message</p>
             <div class="row justify-content-center">
               <div class="col">
-                <textarea class="form-control" rows="3" name="message" id="master-message-content" placeholder="Send a message."></textarea>
+                <textarea class="form-control m-1" rows="3" name="message" id="master-message-content" placeholder="Send a message."></textarea>
               </div>
             </div>
-            <div class="row text-center">
+            <div class="row align-items-center justify-content-center text-center">
               <div class="col">
-                <button class="btn btn-sm btn-outline-secondary my-1" id="master-message-button">send</button>
+                <button class="btn btn-sm btn-outline-secondary m-1" id="master-message-button">send</button>
               </div>
             </div>
-            <div class="row text-center">
+            <div class="row align-items-center justify-content-center text-center">
               <div class="col">
-                <label for="master-message-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="master-message-interval-range" value="1000">
+                <label for="master-message-interval-range" class="form-label m-1">interval</label>
+                <input type="range" class="form-range w-75 m-1" min="50" max="2500" step="1" id="master-message-interval-range" value="1000">
                 <span id="master-message-interval">1000</span>
               </div>
               <div class="col">
-                <div class="d-inline-block form-check form-switch">
+                <div class="d-inline-block form-check form-switch m-1">
                   <input class="form-check-input" type="checkbox" id="master-message-interval-toggle">
-                  <label class="form-check-label" for="master-message-interval-toggle">retrigger</label>
+                  <label class="form-check-label m-1" for="master-message-interval-toggle">repeat</label>
                 </div>
               </div>
             </div>
-            <div class="row text-center">
+            <div class="row align-items-center justify-content-center text-center">
               <div class="col">
                 <label for="master-message-flood-delay-range" class="form-label">delay</label>
-                <input type="range" class="form-range w-75" min="0.0" max="1.0" step="0.001" id="master-message-flood-delay-range" value="1.000">
+                <input type="range" class="form-range w-75 m-1" min="0.0" max="1.0" step="0.001" id="master-message-flood-delay-range" value="1.000">
                 <span id="master-message-flood-delay">1.000</span>
               </div>
               <div class="col">
                 <label for="master-message-flood-count-range" class="form-label">count</label>
-                <input type="range" class="form-range w-75" min="1" max="100" id="master-message-flood-count-range" value="10">
+                <input type="range" class="form-range w-75 m-1" min="1" max="100" id="master-message-flood-count-range" value="10">
                 <span id="master-message-flood-count">10</span>
               </div>
             </div>
-            <div class="row justify-content-center text-center">
+            <div class="row align-items-center justify-content-center text-center">
               <div class="col">
-                <button class="btn btn-sm btn-outline-secondary my-1" id="master-message-flood-button">flood</button>
+                <button class="btn btn-sm btn-outline-secondary m-1" id="master-message-flood-button">flood</button>
               </div>
             </div>
           </div>
@@ -155,7 +158,7 @@
             <p class="text-center h4">Master Tone</p> 
             <div class="row justify-content-center text-center align-items-center">
               <div class="col">
-                <select class="form-select mb-1" id="master-shape-select" name="master-shape">
+                <select class="form-select m-1" id="master-shape-select" name="master-shape">
                   <option value="sine">sine</option>
                   <option value="tri">tri</option>
                   <option value="square">square</option>
@@ -164,48 +167,48 @@
                 </select>
               </div>
             </div>
-            <div class="row justify-content-center text-center align-items-center">
+            <div class="row align-items-center justify-content-center text-center">
               <div class="col-10">
-                <label for="master-frequency-range" class="form-label">frequency</label>
-                <input type="range" class="form-range w-75" min="10" max="10000" id="master-frequency-range" value="1000">
+                <label for="master-frequency-range m-1" class="form-label">frequency</label>
+                <input type="range" class="form-range w-75 m-1" min="10" max="10000" id="master-frequency-range" value="1000">
               </div>
               <div class="col-2">
-                <input class="form-control" type="number" min="10" max="10000" id="master-frequency" value=1000>
+                <input class="form-control m-1" type="number" min="10" max="10000" id="master-frequency" value=1000>
               </div>
             </div>
-            <div class="row justify-content-center text-center align-items-center">
+            <div class="row align-items-center justify-content-center text-center">
               <div class="col-10">
-                <label for="master-duration-range" class="form-label">duration</label>
-                <input type="range" class="form-range w-75" min="2" max="8164" id="master-duration-range" value="500">
+                <label for="master-duration-range" class="form-label m-1">duration</label>
+                <input type="range" class="form-range w-75 m-1" min="2" max="8164" id="master-duration-range" value="500">
               </div>
               <div class="col-2">
-                <input class="form-control" type="number" min="2" max="8164" id="master-duration" value=1000>
+                <input class="form-control m-1" type="number" min="2" max="8164" id="master-duration" value=1000>
               </div>
             </div>
-            <div class="row text-center">
-              <div class="col-8">
-                <label for="master-tone-interval-range" class="form-label">interval</label>
-                <input type="range" class="form-range w-50" min="50" max="2500" step="1" id="master-tone-interval-range" value="1000">
+            <div class="row align-items-center justify-content-center text-center">
+              <div class="col-6">
+                <label for="master-tone-interval-range" class="form-label m-1">interval</label>
+                <input type="range" class="form-range w-75 m-1" min="50" max="2500" step="1" id="master-tone-interval-range" value="1000">
               </div>
                <div class="col-2">
-                <input class="form-control" type="number" min="50" max="2500" id="master-tone-interval" value=1000>
+                <input class="form-control m-1" type="number" min="50" max="2500" id="master-tone-interval" value=1000>
               </div>
-              <div class="col-2">
-                <div class="d-inline-block form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="master-tone-interval-toggle">
-                  <label class="form-check-label" for="master-tone-interval-toggle">retrigger</label>
+              <div class="col-4">
+                <div class="d-inline-block form-check form-switch m-1">
+                  <input class="form-check-input m-1" type="checkbox" id="master-tone-interval-toggle">
+                  <label class="form-check-label m-1" for="master-tone-interval-toggle">repeat</label>
                 </div>
               </div>
             </div>
-            <div class="row text-center">
+            <div class="row align-items-center justify-content-center text-center">
               <div class="col">
-                <button class="btn btn-sm btn-outline-secondary my-1" id="master-tone-button">beep</button>
+                <button class="btn btn-sm btn-outline-secondary m-1" id="master-tone-button">beep</button>
               </div>
             </div>
             <hr>
             <div class="row align-items-center justify-content-center text-center">
               <div class="col-2">
-                <select class="form-select mb-1" id="master-scan-mode-select" name="master-scan-mode">
+                <select class="form-select m-1" id="master-scan-mode-select" name="master-scan-mode">
                   <option value="-sS">-sS</option>
                   <option value="-sT" selected>-sT</option>
                   <option value="-sA">-sA</option>
@@ -214,46 +217,46 @@
               </div>
               <div class="col-1">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="master-scan-option-sy">
-                  <label class="form-check-label" for="master-character-toggle">
+                  <input class="form-check-input m-1" type="checkbox" id="master-scan-option-sy">
+                  <label class="form-check-label m-1" for="master-scan-option-sy">
                     sY
                   </label>
                 </div>
               </div>
               <div class="col-1">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="master-scan-option-sz">
-                  <label class="form-check-label" for="master-character-toggle">
+                  <input class="form-check-input m-1" type="checkbox" id="master-scan-option-sz">
+                  <label class="form-check-label m-1" for="master-scan-option-sz">
                     sZ
                   </label>
                 </div>
               </div>
               <div class="col-1">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="master-scan-option-sv">
-                  <label class="form-check-label" for="master-character-toggle">
+                  <input class="form-check-input m-1" type="checkbox" id="master-scan-option-sv">
+                  <label class="form-check-label m-1" for="master-scan-option-sv">
                     sV
                   </label>
                 </div>
               </div>
               <div class="col-1">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="master-scan-option-sc">
-                  <label class="form-check-label" for="master-character-toggle">
+                  <input class="form-check-input m-1" type="checkbox" id="master-scan-option-sc">
+                  <label class="form-check-label m-1" for="master-scan-option-sc">
                     sC
                   </label>
                 </div>
               </div>
               <div class="col-1">
                 <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="master-scan-option-o">
-                  <label class="form-check-label" for="master-character-toggle">
+                  <input class="form-check-input m-1" type="checkbox" id="master-scan-option-o">
+                  <label class="form-check-label m-1" for="master-scan-option-o">
                     O
                   </label>
                 </div>
               </div>
               <div class="col-1">
-                <button class="btn btn-sm btn-outline-secondary my-1" id="master-nmap-button">nmap</button>
+                <button class="btn btn-sm btn-outline-secondary m-1" id="master-nmap-button">nmap</button>
               </div>
             </div>
           </div>
