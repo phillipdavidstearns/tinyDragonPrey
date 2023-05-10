@@ -51,15 +51,16 @@ class Dragon(Thread):
     self.isStopped = True
     Thread.__init__(self)
 
-    print("interfaces: ", self.interfaces)
-    print("qtyChannels: ", self.qtyChannels)
-    print("CHUNK SIZE:",  self.chunk)
-    print("SAMPLE RATE:", self.rate)
-    print("BYTES PER SAMPLE:", self.width)
-    print("PRINT:", self.printEnabled)
-    print("COLOR:", self.colorEnabled)
-    print("CONTROL_CHARACTERS:", self.ctlEnabled)
-    print('LOG APs:', self.logAPs)
+    print("DEVICE: %s" % self.audioDevice)
+    print("interfaces: %s" % self.interfaces)
+    print("qtyChannels: %s" % self.qtyChannels)
+    print("CHUNK SIZE: %s" %  self.chunk)
+    print("SAMPLE RATE: %s" % self.rate)
+    print("BYTES PER SAMPLE: %s" % self.width)
+    print("PRINT: %s" % self.printEnabled)
+    print("COLOR: %s" % self.colorEnabled)
+    print("CONTROL_CHARACTERS: %s" % self.ctlEnabled)
+    print("LOG APs: %s" % self.logAPs)
 
   def audify_data_callback(self, in_data, frame_count, time_info, status):
     with self.lock:
@@ -431,7 +432,8 @@ class Audifier():
       input=False,
       output_device_index=self.deviceIndex,
       output=True,
-      stream_callback=self.callback
+      stream_callback=self.callback,
+      start=False
     )
     return stream
 
