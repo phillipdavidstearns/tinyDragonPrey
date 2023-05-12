@@ -308,7 +308,7 @@ class Writer(Thread):
           size = len(self.buffers[n])
         else:
           size = self.chunkSize
-        if size > 0:
+        if size > 0 and self.enabled:
           for i in range(size):
             char=chr(0)
             val = self.buffers[n][i]
@@ -322,12 +322,13 @@ class Writer(Thread):
               char = chr(val)
             if self.color: # add the ANSI escape sequence to encode the background color to value of val
               color = (val+self.shift+256)%256 # if we want to specify some amount of color shift...
-              string += '\x1b[48;5;%sm%s\x1b[0m' % (int(color), char)
+              string += '\x1b[48;5;%sm%s' % (int(color), char)
             else:
               string += char
-          if self.enabled:
-            sys.stdout.write(string)
-            sys.stdout.flush()
+          if self.color:
+            string += '\x1b[0m'
+          sys.stdout.write(string)
+          sys.stdout.flush()
         self.buffers[n] = self.buffers[n][size:] # remove chunk from queue. will enmpty over time if disabled
 
   def getState(self):

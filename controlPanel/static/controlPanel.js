@@ -925,49 +925,50 @@ function createPanel(id){
       rogueAPSelectCol.appendChild(rogueAPSelect);
       var rogueAPSSIDToggleCol = document.createElement('div');
       rogueAPSSIDToggleCol.setAttribute('class','col-1');
-        var rogueAPSSIDToggleDiv = formToggleDiv.cloneNode();
-          var rogueAPSSIDToggle = toggle.cloneNode();
-          rogueAPSSIDToggle.setAttribute('id',`${id}-ap-toggle`);
-          rogueAPSSIDToggle.addEventListener('change', async (e) => {
-            var ssid = document.getElementById(`${id}-ssid-select`).value;
-            document.getElementById(`${id}-monitor-toggle`).disabled = e.target.checked;
-            document.getElementById(`${id}-channel-range`).disabled = e.target.checked;
-            var toggle = document.getElementById(`${id}-channel-interval-toggle`);
-            toggle.checked = false;
-            toggle.disabled = e.target.checked;
-            toggle.dispatchEvent(new Event('change'));
-            var command; 
-            var MAC = null;
-            console.log(apLists);
-            if(apLists[id].aps[ssid]){
-              if(apLists[id].aps[ssid]['MACs']){
-                MAC = apLists[id].aps[ssid].MACs[0];
+        // var rogueAPSSIDToggleDiv = formToggleDiv.cloneNode();
+        var rogueAPSSIDToggle = toggle.cloneNode();
+        rogueAPSSIDToggle.setAttribute('id',`${id}-ap-toggle`);
+        rogueAPSSIDToggle.addEventListener('change', async (e) => {
+          var ssid = document.getElementById(`${id}-ssid-select`).value;
+          document.getElementById(`${id}-monitor-toggle`).disabled = e.target.checked;
+          document.getElementById(`${id}-channel-range`).disabled = e.target.checked;
+          var toggle = document.getElementById(`${id}-channel-interval-toggle`);
+          toggle.checked = false;
+          toggle.disabled = e.target.checked;
+          toggle.dispatchEvent(new Event('change'));
+          var command; 
+          var MAC = null;
+          console.log(apLists);
+          if(apLists[id].aps[ssid]){
+            if(apLists[id].aps[ssid]['MACs']){
+              MAC = apLists[id].aps[ssid].MACs[0];
+            }
+          }
+          if(e.target.checked){
+            command = {
+              'target' : id,
+              'command' : 'start_ap',
+              'parameters' : {
+                'SSID' : ssid,
+                'channel' : 5,
+                'MAC' : MAC
               }
             }
-            if(e.target.checked){
-              command = {
-                'target' : id,
-                'command' : 'start_ap',
-                'parameters' : {
-                  'SSID' : ssid,
-                  'channel' : 5,
-                  'MAC' : MAC
-                }
-              }
-            } else {
-              command = {
-                'target' : id,
-                'command' : 'stop_ap',
-                'parameters' : {}
-              }
+          } else {
+            command = {
+              'target' : id,
+              'command' : 'stop_ap',
+              'parameters' : {}
             }
-            fetch('/', {
-              method: "POST",
-              body: JSON.stringify(command)
-            });
+          }
+          fetch('/', {
+            method: "POST",
+            body: JSON.stringify(command)
           });
-        rogueAPSSIDToggleDiv.appendChild(rogueAPSSIDToggle);
-      rogueAPSSIDToggleCol.appendChild(rogueAPSSIDToggleDiv);
+        });
+      // rogueAPSSIDToggleDiv.appendChild(rogueAPSSIDToggle);
+      // rogueAPSSIDToggleCol.appendChild(rogueAPSSIDToggleDiv);
+      rogueAPSSIDToggleCol.appendChild(rogueAPSSIDToggle)
     rogueAPRow.appendChild(rogueAPSSIDCol);
     rogueAPRow.appendChild(rogueAPSelectCol);
     rogueAPRow.appendChild(rogueAPSSIDToggleCol);
