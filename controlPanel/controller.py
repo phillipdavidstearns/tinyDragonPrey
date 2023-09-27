@@ -171,8 +171,10 @@ def scanTarget(target_ip, timeout=0.5):
       timeout=timeout
     )
     result = response.json()
+    # print('[scanTarget] Scan result: %s' % repr(result))
     return result
-  except:
+  except Exception as e:
+    # print('[scanTarget] Exception: %s' % repr(e))
     return None
 
 def worker(targets, q):
@@ -223,13 +225,11 @@ class MainHandler(RequestHandler):
     elif action == 'get_targets':
       network = self.get_query_argument('network', None)
       if network:
-        # targets = await acquireTargets(network)
         targets = await IOLoop.current().run_in_executor(
           None,
           threadedScan,
           network
         )
-        # print('targets: %s' % targets)
         if targets['targets']:
           self.write(targets)
         else:
@@ -246,7 +246,6 @@ class MainHandler(RequestHandler):
         print('While parsing request:', e)
         self.set_status(400)
         return
-      # print('target: %s' % target)
       
       state = {}
       url = 'http://%s/?resource=state' % target

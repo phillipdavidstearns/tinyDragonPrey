@@ -7,9 +7,7 @@ import pyaudio
 import re
 from threading import Thread, Lock
 from time import sleep
-from decouple import config
-from logging import getLogger
-import subprocess
+import logging
 
 # temporary fix to exclude characters that might mess up the console output.
 # https://www.asciitable.com/
@@ -26,10 +24,10 @@ excludedChars=[1,2,3,4,5,6,7,8,9,11,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27
 
 class Dragon(Thread):
   def __init__(self, INTERFACES, CHUNK=1024, PRINT=False, COLOR=False, CONTROL_CHARACTERS=True, DEVICE=0, RATE=44100, WIDTH=1, LOGAPS=True):
-
     if os.getuid() != 0:
       raise Exception('This module requires root priviledges.')
-
+    super().__init__()
+    self.daemon = True
     self.interfaces = []
     ifs = re.split(r'[:;,\.\-_\+|]', INTERFACES)
     for i in range(len(ifs)) :
@@ -49,23 +47,22 @@ class Dragon(Thread):
     self.logAPs = LOGAPS
     self.doRun = False
     self.isStopped = True
-    Thread.__init__(self)
+    self.isReady = False
 
-    print("DEVICE: %s" % self.audioDevice)
-    print("interfaces: %s" % self.interfaces)
-    print("qtyChannels: %s" % self.qtyChannels)
-    print("CHUNK SIZE: %s" %  self.chunk)
-    print("SAMPLE RATE: %s" % self.rate)
-    print("BYTES PER SAMPLE: %s" % self.width)
-    print("PRINT: %s" % self.printEnabled)
-    print("COLOR: %s" % self.colorEnabled)
-    print("CONTROL_CHARACTERS: %s" % self.ctlEnabled)
-    print("LOG APs: %s" % self.logAPs)
+    logging.debug("DEVICE: %s" % self.audioDevice)
+    logging.debug("interfaces: %s" % self.interfaces)
+    logging.debug("qtyChannels: %s" % self.qtyChannels)
+    logging.debug("CHUNK SIZE: %s" %  self.chunk)
+    logging.debug("SAMPLE RATE: %s" % self.rate)
+    logging.debug("BYTES PER SAMPLE: %s" % self.width)
+    logging.debug("PRINT: %s" % self.printEnabled)
+    logging.debug("COLOR: %s" % self.colorEnabled)
+    logging.debug("CONTROL_CHARACTERS: %s" % self.ctlEnabled)
+    logging.debug("LOG APs: %s" % self.logAPs)
 
   def audify_data_callback(self, in_data, frame_count, time_info, status):
-    with self.lock:
-      audioChunk, printQueue = self.sockets.extractFrames(frame_count)
-      self.writer.queueForPrinting(printQueue)
+    audioChunk, printQueue = self.sockets.extractFrames(frame_count)
+    self.writer.queueForPrinting(printQueue)
     return(bytes(audioChunk), pyaudio.paContinue)
 
   def run(self):
@@ -74,7 +71,7 @@ class Dragon(Thread):
       self.sockets = Listener(self.interfaces)
       self.sockets.start()
     except Exception as e:
-      print('Error starting socket listeners:',e)
+      logging.error('Error starting socket listeners: %s' % repr(e))
 
     try:
       self.writer = Writer(
@@ -86,7 +83,7 @@ class Dragon(Thread):
       )
       self.writer.start()
     except Exception as e:
-      print('Error starting console writers:',e)
+      logging.error('Error starting console writers: %s' % repr(e))
 
     # spin up the audio playback engine
     try:
@@ -100,9 +97,11 @@ class Dragon(Thread):
       )
       self.audifier.start()
     except Exception as e:
-      print('Error starting audifiers:',e)
+      logging.error('Error starting audifiers: %s' % prer(e))
 
     self.isStopped = False
+    self.isReady = True
+  
     while self.doRun:
         sleep(0.1)
     self.isStopped = True
@@ -114,33 +113,39 @@ class Dragon(Thread):
       sleep(0.01)
 
     try:
-      print('Stopping Writer...')
+      logging.info('Stopping Writer...')
       if self.writer.color:
         self.writer.stop()
-        print('\x1b[0m',end='')
+        # print('\x1b[0m',end='')
+        sys.stdout.write('\x1b[0m')
       self.writer.stop()
     except Exception as e:
-      print("Error stopping Writer:",e)
+      logging.error("Error stopping Writer: %s" % repr(e))
 
     # Shutdown the PyAudio instance
-    print('Stopping audio stream...')
+    logging.info('Stopping audio stream...')
     try:
       self.audifier.stop()
     except Exception as e:
-      print("Failed to terminate PyAudio instance:",e)
+      logging.error("Failed to terminate PyAudio instance: %s" % repr(e))
 
     # close the sockets
-    print('Closing Listener...')
+    logging.info('Closing Listener...')
     try:
       self.sockets.stop()
     except Exception as e:
-      print("Error closing socket:",e)
+      logging.error("Error closing socket: %s" % repr(e))
 
-    print('The Dragon Sleeps!')
+    logging.info('The Dragon Sleeps!')
     self.join()
+
+  def get_writer_state(self):
+    return self.writer.getState()
 
 class Listener(Thread):
   def __init__(self, interfaces, chunkSize=4096, logAPs=True):
+    super().__init__()
+    self.daemon = True
     self.lock=Lock()
     self.interfaces = interfaces
     self.chunkSize = chunkSize # used to fine tune how much is "grabbed" from the socket
@@ -149,7 +154,6 @@ class Listener(Thread):
     self.doRun = False # flag to run main loop & help w/ smooth shutdown of thread
     self.APs = {}
     self.logAPs=logAPs
-    Thread.__init__(self)
 
   def initSockets(self):
     sockets = []
@@ -221,13 +225,13 @@ class Listener(Thread):
               self.addToAPs(AP)
           with self.lock:
             self.buffers[i] += data # if there's any data there, add it to the buffer
-      except : # if there's definitely no data to be read. the socket will throw and exception
+      except: # if there's definitely no data to be read. the socket will throw and exception
         pass
 
   def extractFrames(self, frames):
+    slices = [] # for making the chunk of audio data
+    printQueue = [] # for assembling the data into chunks for printing  
     with self.lock:
-      slices = [] # for making the chunk of audio data
-      printQueue = [] # for assembling the data into chunks for printing
       for n in range(len(self.buffers)):
         bufferSlice = self.buffers[n][:frames] # grab a slice of data from the buffer
         printQueue.append(bufferSlice) # whatever we got, add it to the print queue. no need to pad
@@ -244,23 +248,23 @@ class Listener(Thread):
     return audioChunk, printQueue
 
   def run(self):
-    print('[LISTENER] run()')
+    logging.info('[LISTENER] run()')
     self.doRun=True
     while self.doRun:
       try:
         self.readSockets()
         sleep(0.0001)
       except Exception as e:
-        print('[LISTENER] Error executing readSockets(): %s' % repr(e))
+        logging.error('[LISTENER] Error executing readSockets(): %s' % repr(e))
 
   def stop(self):
-    print('[LISTENER] stop()')
+    logging.info('[LISTENER] stop()')
     self.doRun=False
     try:
       for socket in self.sockets:
         socket.close()
     except Exception as e:
-      print('While closing socket: %e' % repr(e))
+      logging.error('While closing socket: %e' % repr(e))
     self.join()
 
 #===========================================================================
@@ -294,11 +298,11 @@ class Writer(Thread):
       # since this thread isn't actively grabbing data, it's added here...
     with self.lock:
       if self.enabled:
-          if len(queueData) != len(self.buffers):
-            raise Exception("[!] len(queueData) != len(self.buffers): ",len(queueData),len(self.buffers))
-          for i in range(len(self.buffers)):
-            if queueData[i]:
-                self.buffers[i]+=queueData[i]
+        if len(queueData) != len(self.buffers):
+          raise Exception("[!] len(queueData): %s != len(self.buffers): %s" % (len(queueData),len(self.buffers)))
+        for i in range(len(self.buffers)):
+          if queueData[i]:
+              self.buffers[i]+=queueData[i]
 
   def printBuffers(self):
     for n in range(len(self.buffers)):
@@ -371,21 +375,18 @@ class Writer(Thread):
       self.shift = value
 
   def run(self):
-    print('[WRITER] run()')
+    logging.info('[WRITER] run()')
     self.doRun=True
     while self.doRun:
       try:
         self.printBuffers()
         sleep(0.001)
       except Exception as e:
-        print('[WRITER] Error while executing printBuffers(): %s' % repr(e))
+        logging.error('[WRITER] Error while executing printBuffers(): %s' % repr(e))
 
   def stop(self):
-    print('[WRITER] stop()')
+    logging.info('[WRITER] stop()')
     self.doRun=False
-    # subprocess.run(
-    #   ["reset"]
-    # )
     os.system('reset')
     self.join()
 
@@ -439,14 +440,13 @@ class Audifier():
     return stream
 
   def start(self):
-    print('[AUDIFIER] run()')
-    print("Starting audio stream...")
+    logging.info('[AUDIFIER] run()')
+    logging.debug("Starting audio stream...")
     self.stream.start_stream()
     if self.stream.is_active():
-      print("Audio stream is active.")
+      logging.debug("Audio stream is active.")
 
   def stop(self):
-    print('[AUDIFIER] stop()')
+    logging.info('[AUDIFIER] stop()')
     self.stream.close()
     self.pa.terminate()
-

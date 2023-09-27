@@ -212,7 +212,7 @@ class MainHandler(RequestHandler):
     if resource == "state":
       writerState = await IOLoop.current().run_in_executor(
         None,
-        lambda: tinyDragon.writer.getState()
+        tinyDragon.get_writer_state
       )
       state={
         "print" : writerState['enabled'],
@@ -224,7 +224,10 @@ class MainHandler(RequestHandler):
       }
       self.write(state)
     elif resource == "aps":
-      APs = await IOLoop.current().run_in_executor(None, lambda: tinyDragon.sockets.getAPs())
+      APs = await IOLoop.current().run_in_executor(
+        None,
+        tinyDragon.sockets.getAPs
+      )
       self.write(APs)
     else:
       self.write('<p>HOORAY! YOU DID IT!</p>')
@@ -241,29 +244,34 @@ class MainHandler(RequestHandler):
         if parameter == "print":
           await IOLoop.current().run_in_executor(
             None,
-            lambda: tinyDragon.writer.printEnable(value)
+            tinyDragon.writer.printEnable,
+            value
           )
         elif parameter == "color":
           await IOLoop.current().run_in_executor(
             None,
-            lambda: tinyDragon.writer.colorEnable(value)
+            tinyDragon.writer.colorEnable,
+            value
           )
         elif parameter == "linebreaks":
           await IOLoop.current().run_in_executor(
             None,
-            lambda: tinyDragon.writer.ctlCharactersEnable(value)
+            tinyDragon.writer.ctlCharactersEnable,
+            value
           )
         elif parameter == "color_shift":
           await IOLoop.current().run_in_executor(
             None,
-            lambda: tinyDragon.writer.setColorShift(int(value))
+            tinyDragon.writer.setColorShift,
+            int(value)
           )
         elif parameter == "wlan1_monitor_mode":
           global wlan1_monitor_mode
           wlan1_monitor_mode = value
           await IOLoop.current().run_in_executor(
             None,
-            lambda: setMonitorMode(wlan1_monitor_mode)
+            setMonitorMode,
+            wlan1_monitor_mode
           )
           if wlan1_monitor_mode:
             await IOLoop.current().run_in_executor(
@@ -340,6 +348,7 @@ if __name__ == "__main__":
       COLOR=COLOR,
       CONTROL_CHARACTERS=CONTROL_CHARACTERS
     )
+    tinyDragon.start()
 
     wlan1_monitor_mode = checkWlan1Mode()
     wlan1_channel = checkWlan1Channel()
@@ -350,7 +359,6 @@ if __name__ == "__main__":
     http_server = HTTPServer(application)
     http_server.listen(80)
     main_loop = IOLoop.current()
-    main_loop.run_in_executor(None, tinyDragon.start)
     main_loop.start()
   except Exception as e:
     print('Ooops!',e)
