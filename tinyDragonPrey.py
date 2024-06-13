@@ -204,18 +204,18 @@ def checkWlan1Channel():
 
 #===========================================================================
 
-async def getState():
-  if not (writerState := await IOLoop.current().run_in_executor(
+async def get_dragon_state():
+  if not (state := await IOLoop.current().run_in_executor(
     None,
-    tinyDragon.get_writer_state
+    tinyDragon.get_state
   )):
     return None
 
   return {
-    "print" : writerState['enabled'],
-    "color" : writerState['color'],
-    "linebreaks" : writerState['linebreaks'],
-    "color_shift" : writerState['shift'],
+    "print" : state['enabled'],
+    "color" : state['color'],
+    "linebreaks" : state['linebreaks'],
+    "color_shift" : state['shift'],
     "wlan1_monitor_mode" : checkWlan1Mode(),
     "wlan1_channel" : checkWlan1Channel()
   }
@@ -233,16 +233,16 @@ class MainHandler(RequestHandler):
 
     match resource:
       case "state":
-        if not (state := await getState()):
+        if not (state := await get_dragon_state()):
           self.set_status(400)
           return
         self.write(state)
       case "aps":
-        APs = await IOLoop.current().run_in_executor(
+        access_points = await IOLoop.current().run_in_executor(
           None,
-          tinyDragon.sockets.getAPs
+          tinyDragon.get_access_points
         )
-        self.write(APs)
+        self.write(access_points)
       case _:
         self.set_status(400)
         self.write({'details':'unrecognized argument value / BAD REQUEST'})
@@ -339,6 +339,8 @@ if __name__ == "__main__":
     format='[TINY_DRAGON_PREY] - %(levelname)s | %(message)s'
   )
 
+  getLogger('tornado.access').disabled = True
+
   try:
     debug = True
     templatePath = os.path.dirname(os.readlink(__file__))
@@ -350,24 +352,15 @@ if __name__ == "__main__":
     signal(SIGTERM, signalHandler)
     signal(SIGHUP, signalHandler)
 
-    INTERFACES=config('INTERFACES', default='eth0', cast=str)
-    DEVICE=config('DEVICE', default=0, cast=int)
-    CHUNK=config('CHUNK', default=1024, cast=int)
-    RATE=config('RATE', default=44100, cast=int)
-    WIDTH=config('WIDTH', default=1, cast=int)
-    PRINT=config('PRINT', default=False, cast=bool)
-    COLOR=config('COLOR', default=False, cast=bool)
-    CONTROL_CHARACTERS =config('CONTROL_CHARACTERS', default=True, cast=bool)
-
     tinyDragon = Dragon(
-      INTERFACES=INTERFACES,
-      DEVICE=DEVICE,
-      CHUNK=CHUNK,
-      RATE=RATE,
-      WIDTH=WIDTH,
-      PRINT=PRINT,
-      COLOR=COLOR,
-      CONTROL_CHARACTERS=CONTROL_CHARACTERS
+      interfaces=config('INTERFACES', default='eth0', cast=str),
+      audio_device_index=config('DEVICE', default=0, cast=int),
+      chunk_size=config('CHUNK', default=1024, cast=int),
+      sample_rate=config('RATE', default=44100, cast=int),
+      sample_width=config('WIDTH', default=1, cast=int),
+      print_enabled=config('PRINT', default=False, cast=bool),
+      color_enabled=config('COLOR', default=False, cast=bool),
+      special_characters_enabled=config('CONTROL_CHARACTERS', default=True, cast=bool)
     )
     tinyDragon.start()
 
@@ -375,12 +368,10 @@ if __name__ == "__main__":
     wlan1_channel = checkWlan1Channel()
 
     # run the main loop
-    getLogger('tornado.access').disabled = True
     application = make_app()
     http_server = HTTPServer(application)
     http_server.listen(80)
     main_loop = IOLoop.current()
-
     main_loop.start()
 
   except Exception as e:
