@@ -335,7 +335,7 @@ def make_app():
 if __name__ == "__main__":
 
   logging.basicConfig(
-    level=config('LOG_LEVEL', default=10, cast=int),
+    level=config('LOG_LEVEL', default=20, cast=int),
     format='[TINY_DRAGON_PREY] - %(levelname)s | %(message)s'
   )
 

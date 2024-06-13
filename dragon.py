@@ -169,7 +169,6 @@ class Listener(Thread):
     return self._sockets
 
   def _initBuffers(self):
-    logging.debug('_initBuffers()')
     self._buffers = []
     for interface in self._interfaces :
       self._buffers.append(bytearray())
