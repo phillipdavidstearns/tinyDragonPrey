@@ -10,15 +10,15 @@ var targetList;
 })();
 
 var networkSSIDs = [
-  'EvansSchool Public',
+  'UAP',
+  'Public WiFi',
   '_Free Public WiFi_',
-  '- DEN Airport Free WiFi',
   'DEN Airport Free WiFi',
   'DEN Airport Free WiFi 2.4',
 ]
 
 function removeOptions(selectElement) {
-   var i, L = selectElement.options.length - 1;
+   let i, L = selectElement.options.length - 1;
    for(i = L; i >= 0; i--) {
       selectElement.remove(i);
    }
@@ -28,126 +28,99 @@ function randomRange(min=0, max=0){
   if (max === min){
     return 0.0;
   } else if (min > max) {
-    var smaller = max;
+    let smaller = max;
     max = min;
     min = smaller;
   }
-  var diff = max - min;
+  let diff = max - min;
   return diff*Math.random()+min;
 }
 
 async function fetchNetworks(){
-  var response = await fetch('/?action=get_networks',{method:"POST"})
-  if(response.ok){
-    var networkList = null;
-      try{
-        networkList = await response.json();
-      } catch(error){
-        console.error(error);
-      } finally{
-        return networkList;
-      }
-  } else{
-    return null;
-  }
+  var networkList = await fetch('/networks',{method:"GET"})
+  .then(async (response) => await response.json())
+  .catch((error) => console.error(error));
+  return networkList;
 }
 
 async function updateAPSelect(target_ip){
-  try{
-    const response = await fetch(
-      '/?action=get_aps',
-      {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({'target':`${target_ip}`})
-      }
-    );
-    if(response.ok){
-      const ap_list = await response.json();
-      var select = document.getElementById(`${target_ip}-ssid-select`);
-      removeOptions(select);
-      var option;
-      if (ap_list.online == true){
-        apLists[target_ip]=ap_list;
-        for(var k = 0 ; k < networkSSIDs.length; k++){
-          option = document.createElement('option');
-          option.setAttribute('value', networkSSIDs[k]);
-          option.textContent = networkSSIDs[k];
-          select.appendChild(option);
-        }
-        var keys = Object.keys(ap_list.aps);
-        for(var j = 0 ; j < keys.length; j++){
-          option = document.createElement('option');
-            option.setAttribute('value',keys[j]);
-            option.textContent = `${keys[j]} - ${ap_list.aps[keys[j]].count}`;
-            select.appendChild(option);
-        }
-        select.selectedIndex = 0;
-      } else {
-        option = document.createElement('option');
-        option.textContent = 'unreachable';
-        select.appendChild(option);
-        select.disabled = true;
-        return null;
-      }
+  await fetch(
+    `/access-point?target=${target_ip}`,
+    {method: 'GET'}
+  )
+  .then(async (response) => await response.json())
+  .then((ap_list) => {
+    let select = document.getElementById(`${target_ip}-ssid-select`);
+    removeOptions(select);
+    let option;
+
+    if (!ap_list.online){
+      option = document.createElement('option');
+      option.textContent = 'unreachable';
+      select.appendChild(option);
+      select.disabled = true; 
+      return
     }
-  } catch(error){
-    console.error(error);
-  }
+
+    apLists[target_ip]=ap_list;
+    for(let k = 0 ; k < networkSSIDs.length; k++){
+      option = document.createElement('option');
+      option.setAttribute('value', networkSSIDs[k]);
+      option.textContent = networkSSIDs[k];
+      select.appendChild(option);
+    }
+    let keys = Object.keys(ap_list.aps);
+    for(let j = 0 ; j < keys.length; j++){
+      option = document.createElement('option');
+        option.setAttribute('value',keys[j]);
+        option.textContent = `${keys[j]} - ${ap_list.aps[keys[j]].count}`;
+        select.appendChild(option);
+    }
+    select.selectedIndex = 0;
+
+  })
+  .catch((error) => console.error(error));
 }
 
 async function updateStatus(target_ip){
-  try{
-    const response = await fetch(
-      '/?action=get_state',
-      {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({'target':`${target_ip}`})
-      }
-    );
-    if(response.ok){
-      var state = await response.json();
-        console.log('state:',state);
-        if (state){
-          document.getElementById(`${target_ip}-print-toggle`).checked = state.print;
-          document.getElementById(`${target_ip}-color-toggle`).checked = state.color;
-          document.getElementById(`${target_ip}-linebreaks-toggle`).checked = state.linebreaks;
-          document.getElementById(`${target_ip}-color-shift-range`).value = state.color_shift;
-          document.getElementById(`${target_ip}-color-shift`).textContent = state.color_shift;
-          document.getElementById(`${target_ip}-monitor-toggle`).checked = state.wlan1_monitor_mode;
-          document.getElementById(`${target_ip}-channel-range`).value = state.wlan1_channel;
-          document.getElementById(`${target_ip}-channel`).textContent = state.wlan1_channel;
-          document.getElementById(`${target_ip}-title`).textContent = target_ip;
-        } else {
-          document.getElementById(`${target_ip}-title`).textContent = "unreachable";
-        }
-      }
-  } catch(error){
-    console.error(error);
-  }
+  await fetch(`/target/${target_ip}`, {method: 'GET'})
+  .then(async (response) => await response.json())
+  .then((state) => {
+
+    if (!state){
+      document.getElementById(`${target_ip}-title`).textContent = "unreachable";
+      return
+    }
+
+    document.getElementById(`${target_ip}-print-toggle`).checked = state.print;
+    document.getElementById(`${target_ip}-color-toggle`).checked = state.color;
+    document.getElementById(`${target_ip}-linebreaks-toggle`).checked = state.linebreaks;
+    document.getElementById(`${target_ip}-color-shift-range`).value = state.color_shift;
+    document.getElementById(`${target_ip}-color-shift`).textContent = state.color_shift;
+    document.getElementById(`${target_ip}-monitor-toggle`).checked = state.wlan1_monitor_mode;
+    document.getElementById(`${target_ip}-channel-range`).value = state.wlan1_channel;
+    document.getElementById(`${target_ip}-channel`).textContent = state.wlan1_channel;
+    document.getElementById(`${target_ip}-title`).textContent = target_ip;
+
+  })
+  .catch((error) => console.error(error));
 }
 
 async function updateNetworkList(){
-  var networks = await fetchNetworks();
-  if(networks){
-    var select = document.getElementById('networks-select');
-    for (var i = select.options.length - 1; i >=0; i--){
+  await fetchNetworks()
+  .then((networks) => {
+    let select = document.getElementById('networks-select');
+    for (let i = select.options.length - 1; i >=0; i--){
       select.options[i].remove();
     }
-    for(var ifName in networks){
-      var option = document.createElement('option');
+    for(let ifName in networks){
+      let option = document.createElement('option');
       option.setAttribute('value',networks[ifName]);
       option.textContent=`${ifName}:${networks[ifName]}`;
       select.appendChild(option);
     }
-  }
+  })
+  .catch((error) => console.error(error));
 }
 
 function createPanel(id){
@@ -210,7 +183,7 @@ function createPanel(id){
                 "value" : e.target.checked
               }
             };
-            fetch('/', {
+            fetch('/set', {
               method: "POST",
               body: JSON.stringify(command)
             });
@@ -233,7 +206,7 @@ function createPanel(id){
                 "value" : e.target.checked
               }
             };
-            fetch('/', {
+            fetch('/set', {
               method: "POST",
               body: JSON.stringify(command)
             });
@@ -256,7 +229,7 @@ function createPanel(id){
                 "value" : e.target.checked
               }
             };
-            fetch('/', {
+            fetch('/set', {
               method: "POST",
               body: JSON.stringify(command)
             });
@@ -292,7 +265,7 @@ function createPanel(id){
               "value" : e.target.value
             }
           };
-          fetch('/', {
+          fetch('/set', {
             method: "POST",
             body: JSON.stringify(command)
           });
@@ -357,7 +330,7 @@ function createPanel(id){
                 "value" : e.target.checked
               }
             };
-            fetch('/', {
+            fetch('/set', {
               method: "POST",
               body: JSON.stringify(command)
             });
@@ -389,7 +362,7 @@ function createPanel(id){
               "value" : e.target.value
             }
           };
-          fetch('/', {
+          fetch('/set', {
             method: "POST",
             body: JSON.stringify(command)
           });
@@ -467,7 +440,7 @@ function createPanel(id){
               "message" : message
             }
           };
-          fetch('/', {
+          fetch('/run', {
             method: "POST",
             body: JSON.stringify(command)
           });
@@ -577,7 +550,7 @@ function createPanel(id){
               "count" : count
             }
           };
-          fetch('/', {
+          fetch('/run', {
             method: "POST",
             body: JSON.stringify(command)
           });
@@ -794,7 +767,7 @@ function createPanel(id){
               "shape":shape
             }
           };
-          fetch('/', {
+          fetch('/run', {
             method: "POST",
             body: JSON.stringify(command)
           });
@@ -894,7 +867,7 @@ function createPanel(id){
               "args": parameters
             }
           };
-          fetch('/', {
+          fetch('/run', {
             method: "POST",
             body: JSON.stringify(command)
           });
@@ -925,7 +898,6 @@ function createPanel(id){
       rogueAPSelectCol.appendChild(rogueAPSelect);
       var rogueAPSSIDToggleCol = document.createElement('div');
       rogueAPSSIDToggleCol.setAttribute('class','col-1');
-        // var rogueAPSSIDToggleDiv = formToggleDiv.cloneNode();
         var rogueAPSSIDToggle = toggle.cloneNode();
         rogueAPSSIDToggle.setAttribute('id',`${id}-ap-toggle`);
         rogueAPSSIDToggle.addEventListener('change', async (e) => {
@@ -961,13 +933,11 @@ function createPanel(id){
               'parameters' : {}
             }
           }
-          fetch('/', {
+          fetch('/run', {
             method: "POST",
             body: JSON.stringify(command)
           });
         });
-      // rogueAPSSIDToggleDiv.appendChild(rogueAPSSIDToggle);
-      // rogueAPSSIDToggleCol.appendChild(rogueAPSSIDToggleDiv);
       rogueAPSSIDToggleCol.appendChild(rogueAPSSIDToggle)
     rogueAPRow.appendChild(rogueAPSSIDCol);
     rogueAPRow.appendChild(rogueAPSelectCol);
@@ -1059,6 +1029,14 @@ function toneInterval(id){
   }
 }
 
+async function networkScan(network){
+  const { targets } = await fetch(`/network-scan/${network}`, {method:'GET'})
+  .then(async (response) => await response.json())
+  .catch((error) => console.error(error));
+  return targets
+}
+
+
 function initControlPanel(){
 
   // EVENT LISTENERS
@@ -1068,40 +1046,38 @@ function initControlPanel(){
       await updateNetworkList();
     });
 
- document
-  .getElementById(`targets-button`)
-  .addEventListener('click', async (e) => {
-    try{
+  document
+    .getElementById(`targets-button`)
+    .addEventListener('click', async (e) => {
       targetList = null;
-      e.target.textContent='working';
-      e.target.disabled=true;
-      var network = document.getElementById('networks-select').value;
+      e.target.textContent = 'working';
+      e.target.disabled = true;
+      const network = document.getElementById('networks-select').value;
+
       if(network){
         var parent = document.getElementById('target-panels');
-        const response = await fetch(`/?action=get_targets&network=${network}`,{method:'POST'})
-        if(response.ok){
+        targetList = await networkScan(network)
+        
+        if (!targetList){
+          parent.hidden = true;
+        } else {
+
           while (parent.hasChildNodes()){
             parent.firstChild.remove();
           }
-          var { targets } = await response.json();
-          targetList = targets;
-          var panel;
-          for(var i = 0; i < targets.length; i++){
-            panel = createPanel(targets[i].ip);
+
+          let panel = null;
+          for(var i = 0; i < targetList.length; i++){
+            panel = createPanel(targetList[i].ip);
             parent.appendChild(panel);
-            await updateStatus(targets[i].ip);
+            await updateStatus(targetList[i].ip);
           }
           parent.hidden = false;
-        } else {
-          parent.hidden = true;
         }
       }
-    } catch(error){
-      console.error(error)
-    } finally {
+
       e.target.textContent='targets';
       e.target.disabled=false;
-    }
   });
 
 //MASTER PRINT
@@ -1235,7 +1211,7 @@ document
             "message" : message
           }
         };
-        fetch('/', {
+        fetch('/run', {
           method: "POST",
           body: JSON.stringify(command)
         });
@@ -1286,7 +1262,7 @@ document
             "count" : count
           }
         };
-        fetch('/', {
+        fetch('/run', {
           method: "POST",
           body: JSON.stringify(command)
         });
@@ -1334,7 +1310,7 @@ document
             "shape":shape
           }
         };
-        fetch('/', {
+        fetch('/run', {
           method: "POST",
           body: JSON.stringify(command)
         });
@@ -1389,7 +1365,7 @@ document
             "args": parameters
           }
         };
-        fetch('/', {
+        fetch('/run', {
           method: "POST",
           body: JSON.stringify(command)
         });

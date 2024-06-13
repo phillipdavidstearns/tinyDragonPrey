@@ -34,34 +34,39 @@ def generateWaveform(frequency=1000, amplitude=1.0, duration=1400, shape="sine",
   # duration in samples
   samples = round(sampleRate/frequency) # length of 1 period
   waveform = bytearray()
+
   if(shape == "sine"):
     maxAmp = int(pow(2,bitDepth)/2-1)
     theta = 0.0
     step = 2*pi/samples
     for i in range(duration):
-      sample = round(maxAmp*amplitude*sin(theta)+maxAmp)
+      sample = round(maxAmp * amplitude * sin(theta) + maxAmp)
       waveform.append(sample)
-      theta+=step
+      theta += step
     return waveform
-  elif(shape == "tri"):
+
+  if(shape == "tri"):
     maxAmp = int(pow(2,bitDepth)-1)
     for i in range(duration):
       sample = round(maxAmp*(1-2*abs(round((i%samples)/samples) - (i%samples)/samples)))
       waveform.append(sample)
     return waveform
-  elif(shape == "square"):
+
+  if(shape == "square"):
     maxAmp = int(pow(2,bitDepth)-1)
     for i in range(duration):
       sample = maxAmp*abs(round((i%samples)/samples))
       waveform.append(sample)
     return waveform
-  elif(shape == "noise"):
+
+  if(shape == "noise"):
     maxAmp = int(pow(2,bitDepth)-1)
     for i in range(duration):
       sample = round(maxAmp*random())
       waveform.append(sample)
     return waveform
-  elif(shape == "random"):
+
+  if(shape == "random"):
     maxAmp = int(pow(2,bitDepth)-1)
     sample = bytearray()
     for i in range(samples):
@@ -100,7 +105,6 @@ def nping_icmp_oneshot_bytes(parameters):
     )
   except Exception as e:
     print('nping_icmp_oneshot error:',e)
-
 
 def nping_icmp_oneshot(parameters):
   try:
@@ -157,17 +161,16 @@ def availableNetworks():
   if_names = socket.if_nameindex()
   for if_name in if_names:
     try:
-      ip = { if_name[1] : ifaddresses(if_name[1])[AF_INET][0]['addr'] }
+      ip = {if_name[1]: ifaddresses(if_name[1])[AF_INET][0]['addr']}
       ips.update(ip)
     except:
-      pass
+      continue
   return ips
 
 def scanTarget(target_ip, timeout=0.5):
   try:
-    url='http://'+target_ip+'/?resource=state'
     response = session.get(
-      url,
+      url=f"http://{target_ip}/?resource=state",
       timeout=timeout
     )
     result = response.json()
@@ -180,27 +183,26 @@ def scanTarget(target_ip, timeout=0.5):
 def worker(targets, q):
   while True:
     ip = q.get()
-    result = scanTarget(ip)
-    if result:
+    if (result := scanTarget(ip)):
       target={}
       target['ip'] = ip
       target['state'] = result
-      targets['targets'].append(target)
+      targets.append(target)
     q.task_done()
 
 def threadedScan(ip, concurrent=128):
-  targets = { 'targets' : [] }
+  targets = []
   q = Queue(concurrent * 2)
   for i in range(concurrent):
-    t = Thread(target=worker,args=(targets,q))
+    t = Thread(target=worker, args=(targets,q))
     t.daemon = True
     t.start()
   network = '.'.join(ip.split('.')[:3])
   if ip.split('.')[0] == '127':
-    return targets
+    return { 'targets' : targets }
   try:
     for i in range(255):
-      target_ip = '.'.join([network,str(i)])
+      target_ip = '.'.join([network, str(i)])
       if target_ip == ip:
         continue
       q.put(target_ip)
@@ -213,145 +215,303 @@ def threadedScan(ip, concurrent=128):
 #===========================================================================
 # Request handlers
 
+class SetHandler(RequestHandler):
+  async def post(self):
+
+    try:
+      request = json.loads(self.request.body.decode('utf-8'))
+    except Exception as e:
+      print('While parsing request:', e)
+      self.set_status(400)
+      return
+
+    try:
+      result = await IOLoop.current().run_in_executor(
+        None,
+        lambda: session.post(
+          url=f"http://{request['target']}" ,
+          data=json.dumps({"set": request['set']})
+        )
+      )
+      self.set_status(result.status_code)
+      return
+    except Exception as e:
+      print(f'SetHandler() While parsing request: {repr(e)}')
+      self.set_status(500)
+      return
+      # print('Setting parameters for %s:' % request['target'], e)
+
+class RunHandler(RequestHandler):
+  async def post(self):
+    try:
+      request = json.loads(self.request.body.decode('utf-8'))
+    except Exception as e:
+      print('While parsing request:', e)
+      self.set_status(400)
+      self.write({'details':'Request body must be formatted as a json string.'})
+      return
+
+    try:
+      request['parameters'].update({'target': request['target']})
+    except Exception as e:
+      message = f"error parsing command: {repr(e)} - {repr(request)}"
+      print(message)
+      self.set_status(400)
+      self.write({'details':message})
+      return
+
+    match request['command']:
+      case 'nping_icmp_oneshot':
+        nping_icmp_oneshot(request['parameters'])
+      case 'nping_icmp_flood':
+        nping_icmp_flood(request['parameters'])
+      case 'tone':
+        sendTone(request['parameters'])
+      case 'scan':
+        nmap_scan(request['parameters'])
+      case 'start_ap':
+        start_ap(request['parameters'])
+      case 'stop_ap':
+        stop_ap(request['parameters'])
+
+class NetworksHandler(RequestHandler):
+  async def get(self):
+    try:
+      self.write(availableNetworks())
+      return
+    except Exception as e:
+      message = f"Error while getting available networks: {repr(e)}"
+      print(message)
+      self.set_status(500)
+      self.write({'details':message})
+
+class NetworkScanHandler(RequestHandler):
+  async def get(self, network=None):
+    try:
+      if not network:
+        self.set_status(400)
+        self.write({'details': 'URI missing network'})
+        return
+
+      if not (targets := await IOLoop.current().run_in_executor(
+        None,
+        lambda: threadedScan(network)
+      )):
+        self.set_status(404)
+        self.write({'details': f'Network {network} has no valid targets'})
+        return
+
+      self.write({'targets': targets})
+      return
+    except Exception as e:
+      message = f"Error while scanning network {network} for targets: {repr(e)}"
+      print(message)
+      self.set_status(500)
+      self.write({'details': message})
+
+class TargetHandler(RequestHandler):
+  async def get(self, target=None):
+    try:
+      if not target:
+        self.set_status(400)
+        self.write({'details': 'URI missing target'})
+        return
+
+      response = await IOLoop.current().run_in_executor(
+        None,
+        lambda: session.get(
+          url=f"http://{target}/?resource=state",
+          timeout=(2,2)
+        )
+      )
+      state = response.json()
+      state['online'] = True
+    except:
+      state['online'] = False
+      pass
+    # print('state of target:%s - %s' % (target, repr(state)))
+    self.write(state)
+
+class AccessPointHandler(RequestHandler):
+  async def get(self):
+    try:
+      if not (target := self.get_query_argument('target', None)):
+        self.set_status(400)
+        self.write({'details': 'Missing required argument: target'})
+        return
+
+      response = await IOLoop.current().run_in_executor(
+        None,
+        lambda: session.get(
+          url=f"http://{target}/?resource=aps",
+          timeout=(2,2)
+        )
+      )
+      aps={}
+      aps['aps'] = response.json()
+      aps['online'] = True
+    except:
+      aps['online'] = False
+      pass
+    # print('state of target:%s - %s' % (target, repr(state)))
+    self.write(aps)
+
 class MainHandler(RequestHandler):
-  def get(self):
+  async def get(self):
     self.set_status(200)
     self.render('index.html')
-  async def post(self):
-    action = self.get_query_argument('action',None)
-    if action == 'get_networks':
-      networks = availableNetworks()
-      self.write(networks)
-    elif action == 'get_targets':
-      network = self.get_query_argument('network', None)
-      if network:
-        targets = await IOLoop.current().run_in_executor(
-          None,
-          threadedScan,
-          network
-        )
-        if targets['targets']:
-          self.write(targets)
-        else:
-          self.set_status(404)
-      else:
-        self.set_status(404)
-    elif action == 'get_state':
-      target=None
-      try:
-        body = json.loads(self.request.body.decode('utf-8'))
-        if 'target' in body:
-          target = body['target']
-      except:
-        print('While parsing request:', e)
-        self.set_status(400)
-        return
-      
-      state = {}
-      url = 'http://%s/?resource=state' % target
-      try:
-        response = await IOLoop.current().run_in_executor(
-          None,
-          lambda: session.get(url,timeout=(2,2))
-        )
-        state = response.json()
-        state['online']=True
-      except:
-        state['online']=False
-        pass
-      # print('state of target:%s - %s' % (target, repr(state)))
-      self.write(state)
-    elif action == 'get_aps':
-      target=None
-      try:
-        body = json.loads(self.request.body.decode('utf-8'))
-        if 'target' in body:
-          target = body['target']
-      except:
-        print('While parsing request:', e)
-        self.set_status(400)
-        return
-      # print('target: %s' % target)
-      aps = {}
-      url = 'http://%s/?resource=aps' % target
-      try:
-        response = await IOLoop.current().run_in_executor(
-          None,
-          lambda: session.get(url,timeout=(2,2))
-        )
-        aps['aps'] = response.json()
-        aps['online']=True
-      except:
-        aps['online']=False
-        pass
-      # print('aps sniffed on target %s - %s' % (target,repr(aps)))
-      self.write(aps)
-    else:
-      try:
-        request = json.loads(self.request.body.decode('utf-8'))
-      except Exception as e:
-        print('While parsing request:', e)
-        self.set_status(400)
-        return
-      if 'set' in request:
-        try:
-          url = 'http://%s' % request['target']
-          data = { "set" : request['set'] }
-          await IOLoop.current().run_in_executor(
-            None,
-            lambda: session.post(
-              url=url,
-              data=json.dumps(data)
-            )
-          )
-        except Exception as e:
-          self.set_status(500)
-          # print('Setting parameters for %s:' % request['target'], e)
-      elif 'command' in request:
-        parameters={}
-        try:
-          command = request['command']
-          target = request['target']
-          parameters = request['parameters']
-          parameters['target'] = target
-        except Exception as e:
-          print('error parsing command:%s - %s'% (repr(e), repr(request)))
-        if command == 'nping_icmp_oneshot':
-          nping_icmp_oneshot(parameters)
-        elif command == 'nping_icmp_flood':
-          nping_icmp_flood(parameters)
-        elif command == 'tone':
-          sendTone(parameters)
-        elif command == 'scan':
-          nmap_scan(parameters)
-        elif command == 'start_ap':
-          start_ap(parameters)
-        elif command == 'stop_ap':
-          stop_ap(parameters)
+  # async def post(self):
+
+  #   match action := self.get_query_argument('action', None):
+
+  #     case 'get_targets':
+  #       if not (network := self.get_query_argument('network', None)):
+  #         self.set_status(404)
+  #         return
+
+  #       if not (targets := await IOLoop.current().run_in_executor(
+  #         None,
+  #         lambda: threadedScan(network)
+  #       )):
+  #         self.set_status(404)
+  #         return
+
+  #       self.write(targets)
+  #       return
+
+  #     case 'get_state':
+  #       target = None
+  #       try:
+  #         body = json.loads(self.request.body.decode('utf-8'))
+  #         if 'target' in body:
+  #           target = body['target']
+  #       except:
+  #         print('While parsing request:', e)
+  #         self.set_status(400)
+  #         return
+
+  #       try:
+  #         response = await IOLoop.current().run_in_executor(
+  #           None,
+  #           lambda: session.get(
+  #             url=f"http://{target}/?resource=state",
+  #             timeout=(2,2)
+  #           )
+  #         )
+  #         state = response.json()
+  #         state['online'] = True
+  #       except:
+  #         state['online'] = False
+  #         pass
+  #       # print('state of target:%s - %s' % (target, repr(state)))
+  #       self.write(state)
+
+  #     case 'get_aps':
+  #       target = None
+  #       try:
+  #         body = json.loads(self.request.body.decode('utf-8'))
+  #         if 'target' in body:
+  #           target = body['target']
+  #       except:
+  #         print('While parsing request:', e)
+  #         self.set_status(400)
+  #         return
+  #       # print('target: %s' % target)
+  #       aps = {}
+  #       try:
+  #         response = await IOLoop.current().run_in_executor(
+  #           None,
+  #           lambda: session.get(
+  #             url=f"http://{target}/?resource=aps",
+  #             timeout=(2,2)
+  #           )
+  #         )
+  #         aps['aps'] = response.json()
+  #         aps['online'] = True
+  #       except:
+  #         aps['online'] = False
+  #         pass
+  #       # print('aps sniffed on target %s - %s' % (target,repr(aps)))
+  #       self.write(aps)
+
+  #     case _:
+  #       try:
+  #         request = json.loads(self.request.body.decode('utf-8'))
+  #       except Exception as e:
+  #         print('While parsing request:', e)
+  #         self.set_status(400)
+  #         return
+
+  #       if 'set' in request:
+  #         try:
+  #           result = await IOLoop.current().run_in_executor(
+  #             None,
+  #             lambda: session.post(
+  #               url=f"http://{request['target']}" ,
+  #               data=json.dumps({"set": request['set']})
+  #             )
+  #           )
+  #           self.set_status(result.status_code)
+  #           return
+  #         except Exception as e:
+  #           self.set_status(500)
+  #           return
+  #           # print('Setting parameters for %s:' % request['target'], e)
+
+  #       if 'command' in request:
+  #         parameters={}
+  #         try:
+  #           command = request['command']
+  #           target = request['target']
+  #           parameters = request['parameters']
+  #           parameters['target'] = target
+  #         except Exception as e:
+  #           print(f"error parsing command: {repr(e)} - {repr(request)} ")
+  #         if command == 'nping_icmp_oneshot':
+  #           nping_icmp_oneshot(parameters)
+  #         elif command == 'nping_icmp_flood':
+  #           nping_icmp_flood(parameters)
+  #         elif command == 'tone':
+  #           sendTone(parameters)
+  #         elif command == 'scan':
+  #           nmap_scan(parameters)
+  #         elif command == 'start_ap':
+  #           start_ap(parameters)
+  #         elif command == 'stop_ap':
+  #           stop_ap(parameters)
+
+class DefaultHandler(RequestHandler):
+  def prepare(self):
+    self.set_status(404)
 
 #===========================================================================
-# Executed when run as stand alone
+# Start and stop Access Point
 
 def start_ap(parameters):
   try:
     # print('start_ap:',parameters)
-    url = 'http://%s' % parameters['target']
-    data = { 
-      "action": "start_ap",
-      "parameters" : parameters
-    }
-    IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
+    IOLoop.current().run_in_executor(
+      None,
+      lambda: session.post(
+        url=f"http://{parameters['target']}",
+        data=json.dumps({"action": "start_ap", "parameters" : parameters})
+      )
+    )
   except Exception as e:
-    print('While setting up rogue AP on %s:' % parameters['target'], e)
+    print(f"While setting up rogue AP on {parameters['target']}: {repr(e)}")
 
 def stop_ap(parameters):
   try:
     # print('stop_ap:',parameters)
-    url = 'http://%s' % parameters['target']
-    data = { "action": "stop_ap" }
-    IOLoop.current().run_in_executor(None,lambda: session.post(url=url,data=json.dumps(data)))
+    IOLoop.current().run_in_executor(
+      None,
+      lambda: session.post(
+        url=f"http://{parameters['target']}",
+        data=json.dumps({ "action": "stop_ap"})
+      )
+    )
   except Exception as e:
-    print('While stopping rogue AP on %s:' % parameters['target'], e)
+    print(f"While stopping rogue AP on {parameters['target']}: {repr(e)}")
 
 #===========================================================================
 # Executed when run as stand alone
@@ -370,10 +530,17 @@ def make_app():
   settings = dict(
     template_path = os.path.join(path, 'templates'),
     static_path = os.path.join(path, 'static'),
+    default_handler_class = DefaultHandler,
     debug = debug
   )
   urls = [
-    (r'/', MainHandler)
+    (r'/', MainHandler),
+    (r'/set', SetHandler),
+    (r'/run', RunHandler),
+    (r'/networks', NetworksHandler),
+    (r'/network-scan/(.*)', NetworkScanHandler),
+    (r'/target/(.*)', TargetHandler),
+    (r'/access-point', AccessPointHandler)
   ]
   return Application(urls, **settings)
 
