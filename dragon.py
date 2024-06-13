@@ -113,7 +113,6 @@ class Dragon(Thread):
     try:
       if self.writer.isColorEnabled():
         self.writer.stop()
-        # print('\x1b[0m',end='')
         sys.stdout.write('\x1b[0m')
       self.writer.stop()
     except Exception as e:
@@ -154,28 +153,27 @@ class Listener(Thread):
     self._interfaces = interfaces
     self._chunkSize = chunkSize # used to fine tune how much is "grabbed" from the socket
     self._sockets = self._initSockets()
-    self._buffers = self._initBuffers() # data will be into and out of the buffer(s)
+    self._buffers = self._initBuffers()
     self._doRun = False # flag to run main loop & help w/ smooth shutdown of thread
     self._APs = {}
     self._logAPs=logAPs
 
   def _initSockets(self):
-    with self._lock:
-      self._sockets = []
-      for interface in self._interfaces:
-        # etablishes a RAW socket on the given interface, e.g. eth0. meant to only be read.
-        s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(0x0003))
-        s.bind((interface,0))
-        s.setblocking(False) # non-blocking
-        self._sockets.append(s)
-      return self._sockets
+    self._sockets = []
+    for interface in self._interfaces:
+      # etablishes a RAW socket on the given interface, e.g. eth0. meant to only be read.
+      s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(0x0003))
+      s.bind((interface, 0))
+      s.setblocking(False) # non-blocking
+      self._sockets.append(s)
+    return self._sockets
 
   def _initBuffers(self):
-    with self._lock:
-      self._buffers = []
-      for interface in self._interfaces :
-        self._buffers.append(bytearray())
-      return self._buffers
+    logging.debug('_initBuffers()')
+    self._buffers = []
+    for interface in self._interfaces :
+      self._buffers.append(bytearray())
+    return self._buffers
 
   def _analyzePacket(self, pkt):
     AP = {}
@@ -214,16 +212,15 @@ class Listener(Thread):
         self._APs[key]['count'] += 1
 
   def _readSockets(self):
-    with self._lock:
-      for i in range(len(self._sockets)):
-        try: # grab a chunk of data from the socket...
-          if data := self._sockets[i].recv(65535):
-            if self._interfaces[i] == 'wlan1' and self._logAPs:
-              if AP := self._analyzePacket(data): # extract APs
-                self._addToAPs(AP)
-              self._buffers[i] += data # if there's any data there, add it to the buffer
-        except: # if there's definitely no data to be read. the socket will throw and exception
-          pass
+    for i in range(len(self._sockets)):
+      try: # grab a chunk of data from the socket...
+        if data := self._sockets[i].recv(65535):
+          if self._interfaces[i] == 'wlan1' and self._logAPs:
+            if AP := self._analyzePacket(data): # extract APs
+              self._addToAPs(AP)
+          self._buffers[i] += data # if there's any data there, add it to the buffer
+      except: # if there's definitely no data to be read. the socket will throw and exception
+        pass
 
   def extractFrames(self, frames):
     slices = [] # for making the chunk of audio data
@@ -278,7 +275,7 @@ class Listener(Thread):
 # in the initialization portion of the script when run as standalone.
 
 class Writer(Thread):
-  def __init__(self, qtyChannels=1, chunkSize=4096, color=False, linebreaks=True, enabled=False):
+  def __init__(self, qtyChannels=1, chunkSize=256, color=False, linebreaks=True, enabled=False):
     super().__init__()
     self.daemon = True
     self._lock=Lock()
@@ -289,21 +286,19 @@ class Writer(Thread):
     self._shift = 0
     self._enabled = enabled
     self._chunkSize = chunkSize
-    self._buffers = []
-    self._initBuffers() # the so called printQueue
+    self._buffers = self._initBuffers() # the so called printQueue
 
   def _initBuffers(self):
-    with self._lock:
-      self._buffers = []
-      for i in range(self._qtyChannels):
-        self._buffers.append(bytearray())
-      return self._buffers
+    self._buffers = []
+    for i in range(self._qtyChannels):
+      self._buffers.append(bytearray())
+    return self._buffers
 
   def queueForPrinting(self, queueData):
+    # this thread isn't actively grabbing data, it's added here...
     if not self._enabled:
       return
-    # print('adding to queue: %s' % repr(queueData))
-    # since this thread isn't actively grabbing data, it's added here...
+
     with self._lock:
       if len(queueData) != len(self._buffers):
         raise Exception(f"[!] len(queueData): {len(queueData)} != len(self.buffers): {len(self._buffers)}")
@@ -315,41 +310,40 @@ class Writer(Thread):
     if not self._enabled:
       return
 
-    with self._lock:
-      for n in range(len(self._buffers)):
-        string = ''
+    for n in range(len(self._buffers)):
+      string = ''
 
-        if self._chunkSize > len(self._buffers[n]):
-          size = len(self._buffers[n])
-        else:
-          size = self._chunkSize
+      if self._chunkSize > len(self._buffers[n]):
+        size = len(self._buffers[n])
+      else:
+        size = self._chunkSize
 
-        if size > 0:
-          for i in range(size):
-            char=chr(0)
-            val = self._buffers[n][i]
-            
-            if self._linebreaks:
-              TEST = True
-            else:
-              TEST = val > 31
-            
-            if TEST and not val in excludedChars:
-              char = chr(val)
+      if size > 0:
+        for i in range(size):
+          char=chr(0)
+          val = self._buffers[n][i]
+          
+          if self._linebreaks:
+            TEST = True
+          else:
+            TEST = val > 31
+          
+          if TEST and not val in excludedChars:
+            char = chr(val)
 
-            if self._color: # add the ANSI escape sequence to encode the background color to value of val
-              color = (val + self._shift + 256) % 256 # if we want to specify some amount of color shift...
-              string += f'\x1b[48;5;{int(color)}m{char}'
-            else:
-              string += char
+          if self._color: # add the ANSI escape sequence to encode the background color to value of val
+            color = (val + self._shift + 256) % 256 # if we want to specify some amount of color shift...
+            string += f'\x1b[48;5;{int(color)}m{char}'
+          else:
+            string += char
 
-          if self._color:
-            string += '\x1b[0m'
+        if self._color:
+          string += '\x1b[0m'
 
-          sys.stdout.write(string)
-          sys.stdout.flush()
+        sys.stdout.write(string)
+        sys.stdout.flush()
 
-          self._buffers[n] = self._buffers[n][size:] # remove chunk from queue. will enmpty over time if disabled
+        self._buffers[n] = self._buffers[n][size:] # remove chunk from queue. will enmpty over time if disabled
 
   def getState(self):
     with self._lock:
@@ -395,7 +389,8 @@ class Writer(Thread):
       self._shift = value
 
   def isRunning(self):
-    return not self._doRun
+    with self._lock:
+      return not self._doRun
 
   def run(self):
     logging.info('[WRITER] run()')

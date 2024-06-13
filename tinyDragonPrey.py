@@ -4,6 +4,7 @@ import os
 import sys
 from signal import *
 from decouple import config
+import logging
 from logging import getLogger
 
 import subprocess
@@ -15,24 +16,21 @@ import json
 
 from dragon import *
 
-path = os.path.dirname(os.path.abspath(__file__))
-debug = True
-
 #===========================================================================
 # Signal Handler / shutdown procedure
 
 def signalHandler(signum, frame):
-  print('\n[!] Caught termination signal: ', signum)
+  logging.info(f'\nCaught termination signal: {signum}')
   shutdown()
 
 def shutdown():
   try:
-    main_loop.stop()
+    IOLoop.current().stop()
     tinyDragon.stop()
   except Exception as e:
-    print('Oh dang! %s' % repr(e))
+    logging.error(f'Oh dang! {repr(e)}')
   finally:
-    print('Peace out!')
+    logging.info('Peace out!')
     sys.exit(0)
 
 #===========================================================================
@@ -205,6 +203,24 @@ def checkWlan1Channel():
   return channel
 
 #===========================================================================
+
+async def getState():
+  if not (writerState := await IOLoop.current().run_in_executor(
+    None,
+    tinyDragon.get_writer_state
+  )):
+    return None
+
+  return {
+    "print" : writerState['enabled'],
+    "color" : writerState['color'],
+    "linebreaks" : writerState['linebreaks'],
+    "color_shift" : writerState['shift'],
+    "wlan1_monitor_mode" : checkWlan1Mode(),
+    "wlan1_channel" : checkWlan1Channel()
+  }
+
+#===========================================================================
 # Request handlers
 
 class DefaultHandler(RequestHandler):
@@ -217,18 +233,9 @@ class MainHandler(RequestHandler):
 
     match resource:
       case "state":
-        writerState = await IOLoop.current().run_in_executor(
-          None,
-          tinyDragon.get_writer_state
-        )
-        state={
-          "print" : writerState['enabled'],
-          "color" : writerState['color'],
-          "linebreaks" : writerState['linebreaks'],
-          "color_shift" : writerState['shift'],
-          "wlan1_monitor_mode" : checkWlan1Mode(),
-          "wlan1_channel" : checkWlan1Channel()
-        }
+        if not (state := await getState()):
+          self.set_status(400)
+          return
         self.write(state)
       case "aps":
         APs = await IOLoop.current().run_in_executor(
@@ -326,11 +333,19 @@ def make_app():
   return Application(urls, **settings)
 
 if __name__ == "__main__":
-  templatePath = os.path.dirname(os.readlink(__file__))
-  f = open(os.path.join(templatePath,'hostapd-conf.template'))
-  hostapdConfTemplate = f.read()
-  f.close()
+
+  logging.basicConfig(
+    level=config('LOG_LEVEL', default=10, cast=int),
+    format='[TINY_DRAGON_PREY] - %(levelname)s | %(message)s'
+  )
+
   try:
+    debug = True
+    templatePath = os.path.dirname(os.readlink(__file__))
+    f = open(os.path.join(templatePath,'hostapd-conf.template'))
+    hostapdConfTemplate = f.read()
+    f.close()
+
     signal(SIGINT, signalHandler)
     signal(SIGTERM, signalHandler)
     signal(SIGHUP, signalHandler)
@@ -369,4 +384,9 @@ if __name__ == "__main__":
     main_loop.start()
 
   except Exception as e:
-    print('Ooops!',e)
+    logging.error(f'Ooops! {repr(e)}')
+  finally:
+    IOLoop.current().stop()
+    if tinyDragon:
+      tinyDragon.stop()
+    sys.exit(0)
