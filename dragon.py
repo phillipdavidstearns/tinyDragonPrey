@@ -96,7 +96,7 @@ class Dragon(Thread):
       )
       self.audifier.start()
     except Exception as e:
-      logging.error(f'Error starting audifiers: {prer(e)}')
+      logging.error(f'Error starting audifiers: {repr(e)}')
 
     self.is_stopped = False
     self.is_running = True
@@ -439,24 +439,24 @@ class Audifier():
 
     # These are here for debugging purposes...
     # for some reason, HDMI output eludes me.
-    # print('format:', self.pa.get_format_from_sample_width(self.sample_width))
+    # print('format:', self.pa.get_format_from_width(self.sample_width))
     
     # print(
     #   self.pa.is_format_supported(
     #     sample_rate = self.sample_rate,
     #     output_device=self.deviceIndex,
     #     output_channels=self.qty_channels,
-    #     output_format=self.pa.get_format_from_sample_width(self.sample_width)
+    #     output_format=self.pa.get_format_from_width(self.sample_width)
     #   )
     # )
 
     self._stream = self._pa.open(
-      format=self._pa.get_format_from_sample_width(self._sample_width),
+      format=self._pa.get_format_from_width(self._sample_width),
       channels=self._qty_channels,
-      sample_rate=self._sample_rate,
+      rate=self._sample_rate,
       frames_per_buffer=self._chunk_size,
       input=False,
-      output_device_index=self._deviceIndex,
+      output_device_index=self._audio_device_index,
       output=True,
       stream_callback=self._callback,
       start=False
