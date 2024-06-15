@@ -13,8 +13,6 @@ import logging
 # https://www.asciitable.com/
 # https://serverfault.com/questions/189520/which-characters-if-catd-will-mess-up-my-terminal-and-make-a-ton-of-noise
 
-excludedChars=[1,2,3,4,5,6,7,8,9,11,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,155,255]
-
 #===========================================================================
 # Dragon
 # Manages the trio of packet sniffer, data printer, and audifier
@@ -44,6 +42,7 @@ class Dragon(Thread):
     self.do_run = False
     self.is_stopped = True
     self.is_running = False
+    self.excluded_chars=[1,2,3,4,5,6,7,8,9,11,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,155,255]
 
     logging.debug("audio_device_index: %s" % self.audio_device_index)
     logging.debug("interfaces: %s" % self.interfaces)
@@ -163,25 +162,35 @@ class Listener(Thread):
     self._buffers = self._init_buffers()
     self._do_run = False # flag to run main loop & help w/ smooth shutdown of thread
     self._access_points = {}
-    self._ap_logging_enabled=ap_logging_enabled
+    self._ap_logging_enabled=ap_logging_enabled # if True, the packets are analyzed for access point data, which is stored in self._access_points
 
   def _init_sockets(self):
     self._sockets = []
     for interface in self._interfaces:
       # etablishes a RAW socket on the given interface, e.g. eth0. meant to only be read.
-      s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.ntohs(0x0003))
+      # only compatible with linux systems
+      s = socket.socket(
+        family=socket.AF_PACKET,
+        type=socket.SOCK_RAW,
+        proto=socket.ntohs(0x0003)
+      )
       s.bind((interface, 0))
       s.setblocking(False) # non-blocking
       self._sockets.append(s)
     return self._sockets
 
   def _init_buffers(self):
+    # create a list of buffers, one for each interface to be listened to
+    # each buffer is a bytearray
     self._buffers = []
     for interface in self._interfaces :
       self._buffers.append(bytearray())
     return self._buffers
 
   def _analyze_packet(self, pkt):
+    # Parses packets and looks for probe requests from devices,
+    # extracts the SSID and MAC address associated with the access point
+    # the packet was destined for.
     SSID = None
     MAC = None
     try:
@@ -206,6 +215,9 @@ class Listener(Thread):
       return None
 
   def _add_access_point(self, access_point):
+    # need to limit the size of self._access_points
+    # need to implement a routine to reset
+    # shouldn't need to hang on to this data here
     for key in access_point.keys():
       if not key in self._access_points:
         self._access_points[key] = {}
@@ -218,33 +230,37 @@ class Listener(Thread):
 
   def _read_sockets(self):
     for i in range(len(self._sockets)):
-      try: # grab a chunk of data from the socket...
+      try:
+        # grab a chunk of data from the socket...
         if data := self._sockets[i].recv(self._chunk_size):
           if self._interfaces[i] == 'wlan1' and self._ap_logging_enabled:
             if access_point := self._analyze_packet(data): # extract access_points
               self._add_access_point(access_point)
           self._buffers[i] += data # if there's any data there, add it to the buffer
-      except: # if there's definitely no data to be read. the socket will throw and exception
+      except: # if there's no data to be read. the socket will throw an exception
         pass
+
 
   def extract_frames(self, frames):
     slices = [] # for making the chunk of audio data
-    printQueue = [] # for assembling the data into chunks for printing  
+    print_queue = [] # for assembling the data into chunks for printing  
     with self._lock:
       for n in range(len(self._buffers)):
         bufferSlice = self._buffers[n][:frames] # grab a slice of data from the buffer
-        printQueue.append(bufferSlice) # whatever we got, add it to the print queue. no need to pad
+        print_queue.append(bufferSlice) # whatever we got, add it to the print queue. no need to pad
         # this makes sure we return as many frames as requested, by padding with audio "0"
         padded = bufferSlice + bytes([127]) * (frames - len(bufferSlice))
         slices.append(padded)
         self._buffers[n] = self._buffers[n][frames:] # remove the extracted data from the buffer
-      if len(self._buffers) == 2 : # interleave the slices to form a stereo chunk
-        audioChunk = [ x for y in zip(slices[0], slices[1]) for x in y ]
-      elif len(self._buffers) == 1: # marvelous mono
-        audioChunk = slices[0]
-      else:
-        raise Exception("[!] Only supports 1 or two channels/interfaces.")
-    return audioChunk, printQueue
+      
+      match len(self._buffers):
+        case 2: # interleave the slices to form a stereo chunk
+          audio_chunk = [ x for y in zip(slices[0], slices[1]) for x in y ]
+        case 1: # marvelous mono
+          audio_chunk = slices[0]
+        case _:
+          raise Exception("[!] Only supports 1 or two channels/interfaces.")
+    return audio_chunk, print_queue
 
   def get_access_points(self):
     with self._lock:
@@ -291,7 +307,7 @@ class Writer(Thread):
     self._shift = 0
     self._enabled = enabled
     self._chunk_size = chunk_size
-    self._buffers = self._init_buffers() # the so called printQueue
+    self._buffers = self._init_buffers() # the so called print_queue
 
   def _init_buffers(self):
     self._buffers = []
@@ -299,18 +315,18 @@ class Writer(Thread):
       self._buffers.append(bytearray())
     return self._buffers
 
-  def queue_for_printing(self, queueData):
+  def queue_for_printing(self, queue_data):
     # this thread isn't actively grabbing data, it's added here...
     if not self._enabled:
       return
     
-    if len(queueData) != len(self._buffers):
-      raise Exception(f"[!] len(queueData): {len(queueData)} != len(self.buffers): {len(self._buffers)}")
+    if len(queue_data) != len(self._buffers):
+      raise Exception(f"[!] len(queue_data): {len(queue_data)} != len(self.buffers): {len(self._buffers)}")
     
     for i in range(len(self._buffers)):
-      if queueData[i]:
+      if queue_data[i]:
         with self._lock:
-          self._buffers[i] += queueData[i]
+          self._buffers[i] += queue_data[i]
 
   def _print_buffers(self):
     if not self._enabled:
@@ -334,7 +350,7 @@ class Writer(Thread):
           else:
             TEST = val > 31
           
-          if TEST and not val in excludedChars:
+          if TEST and not val in self.excluded_chars:
             char = chr(val)
 
           if self._color: # add the ANSI escape sequence to encode the background color to value of val
