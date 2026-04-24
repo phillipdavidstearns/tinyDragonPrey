@@ -7,3 +7,4 @@ __pycache__/
 testfiles/
 bootstrap-5.3.3-dist.zip
 bootstrap-5.3.3-dist/
+venv/

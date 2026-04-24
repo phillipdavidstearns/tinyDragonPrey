@@ -14,7 +14,9 @@ from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 import json
 
-from dragon import *
+from rpi_dragon import Dragon
+
+import traceback
 
 #===========================================================================
 # Signal Handler / shutdown procedure
@@ -343,7 +345,7 @@ if __name__ == "__main__":
 
   try:
     debug = True
-    templatePath = os.path.dirname(os.readlink(__file__))
+    templatePath = os.path.dirname(os.path.abspath(__file__))
     f = open(os.path.join(templatePath,'hostapd-conf.template'))
     hostapdConfTemplate = f.read()
     f.close()
@@ -353,14 +355,16 @@ if __name__ == "__main__":
     signal(SIGHUP, signalHandler)
 
     tinyDragon = Dragon(
-      interfaces=config('INTERFACES', default='eth0', cast=str),
+      interfaces=config('INTERFACES', default=['eth0'], cast=lambda v: [s.strip() for s in v.split(',')]),
       audio_device_index=config('DEVICE', default=0, cast=int),
       chunk_size=config('CHUNK', default=1024, cast=int),
       sample_rate=config('RATE', default=44100, cast=int),
       sample_width=config('WIDTH', default=1, cast=int),
       print_enabled=config('PRINT', default=False, cast=bool),
       color_enabled=config('COLOR', default=False, cast=bool),
-      special_characters_enabled=config('CONTROL_CHARACTERS', default=True, cast=bool)
+      linebreak_enabled=config('CONTROL_CHARACTERS', default=True, cast=bool),
+      audio_only=config('AUDIO_ONLY', default=True, cast=bool),
+      log_aps = True
     )
     tinyDragon.start()
 
@@ -376,6 +380,7 @@ if __name__ == "__main__":
 
   except Exception as e:
     logging.error(f'Ooops! {repr(e)}')
+    traceback.print_exception(e)
   finally:
     IOLoop.current().stop()
     if tinyDragon:

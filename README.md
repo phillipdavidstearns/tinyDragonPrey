@@ -302,3 +302,5 @@ ignore_broadcast_ssid=0
 ```
 
 1. Reboot and activate AP with `sudo systemctl start hostapd.service`
+
+Note: For creating multiple APs, one per wlan interface, see [https://unix.stackexchange.com/questions/618635/hostapd-on-two-interfaces-two-configuration-files](https://unix.stackexchange.com/questions/618635/hostapd-on-two-interfaces-two-configuration-files)
