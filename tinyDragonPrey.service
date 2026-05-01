@@ -1,11 +1,11 @@
 [Unit]
-Description=packet2audio for %I
-After=network.target rc.local.service
+Description=tinyDragonPrey
+After=network.target
 
 [Service]
 Type=simple
 ExecStartPre=/bin/sleep 5
-ExecStart=/usr/local/bin/packet2audio -i %I
+ExecStart=/usr/local/src/venv/bin/python3 /usr/local/src/tinyDragonPrey/tinyDragonPrey.py
 Restart=on-success
 RestartPreventExitStatus=SIGTERM SIGKILL
 RestartSec=5

@@ -20,11 +20,25 @@ from tornado.web import authenticated, Application, RequestHandler, StaticFileHa
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.httputil import HTTPHeaders
+from tornado.escape import json_decode
 
 import json
+from functools import wraps
 
 path = os.path.dirname(os.path.abspath(__file__))
 debug = True
+
+#================================================================
+# Specifically for use with Tornado
+
+def async_wrapper(func):
+  @wraps(func)
+  async def run(*args, **kwargs):
+    return await IOLoop.current().run_in_executor(
+      None,
+      lambda: func(*args, **kwargs)
+    )
+  return run
 
 #===========================================================================
 # Utilities
@@ -37,142 +51,138 @@ def generateWaveform(frequency=1000, amplitude=1.0, duration=1400, shape="sine",
   waveform = bytearray()
   maxAmp = int(pow(2, bitDepth) / 2 - 1)
 
-  if(shape == "sine"):
-    
-    theta = 0.0
-    step = 2 * pi / samples
-    for i in range(duration):
-      sample = round(maxAmp * amplitude * sin(theta) + maxAmp)
-      waveform.append(sample)
-      theta += step
-    return waveform
+  match shape:
+    case "sine":
+      theta = 0.0
+      step = 2 * pi / samples
+      for i in range(duration):
+        sample = round(maxAmp * amplitude * sin(theta) + maxAmp)
+        waveform.append(sample)
+        theta += step
+      return waveform
 
-  if(shape == "tri"):
-    for i in range(duration):
-      sample = round(maxAmp * (1 - 2 * abs(round((i % samples) / samples) - (i % samples) / samples)))
-      waveform.append(sample)
-    return waveform
+    case "tri":
+      for i in range(duration):
+        sample = round(maxAmp * (1 - 2 * abs(round((i % samples) / samples) - (i % samples) / samples)))
+        waveform.append(sample)
+      return waveform
 
-  if(shape == "square"):
-    for i in range(duration):
-      sample = maxAmp * abs(round((i % samples) / samples))
-      waveform.append(sample)
-    return waveform
+    case "square":
+      for i in range(duration):
+        sample = maxAmp * abs(round((i % samples) / samples))
+        waveform.append(sample)
+      return waveform
 
-  if(shape == "noise"):
-    for i in range(duration):
-      sample = round(maxAmp*random())
-      waveform.append(sample)
-    return waveform
+    case "noise":
+      for i in range(duration):
+        sample = round(maxAmp*random())
+        waveform.append(sample)
+      return waveform
 
-  if(shape == "random"):
-    sample = bytearray()
-    for i in range(samples):
-      sample.append(round(maxAmp*random()))
-    for i in range(duration):
-      waveform.append(sample[i % len(sample)])
-    return waveform
+    case "random":
+      sample = bytearray()
+      for i in range(samples):
+        sample.append(round(maxAmp*random()))
+      for i in range(duration):
+        waveform.append(sample[i % len(sample)])
+      return waveform
 
-def sendTone(parameters):
+async def sendTone(parameters):
   try:
-    frequency=float(parameters['frequency'])
-    amplitude=float(parameters['amplitude'])
-    duration=int(parameters['duration'])
-    shape=parameters['shape']
+    frequency = float(parameters['frequency'])
+    amplitude = float(parameters['amplitude'])
+    duration = int(parameters['duration'])
+    shape = parameters['shape']
     parameters['message'] = generateWaveform(
       frequency=frequency,
       amplitude=amplitude,
       duration=duration,
       shape=shape
     )
-    nping_icmp_oneshot_bytes(parameters)
+    await nping_icmp_oneshot_bytes(parameters)
   except Exception as e:
     logging.error('sendTone():',e)
 
+@async_wrapper
 def nping_icmp_oneshot_bytes(parameters):
   try:
     target = parameters['target']
     message = parameters['message']
-    IOLoop.current().run_in_executor(
-      None,
-      lambda: subprocess.run(
-        ["sudo","nping","--icmp",target,"-c","1","--data",message.hex()],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-      )
+    subprocess.run(
+      ["sudo", "nping", "--icmp", target, "-c", "1", "--data", message.hex()],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
     )
+
   except Exception as e:
     logging.error('nping_icmp_oneshot error:',e)
 
+@async_wrapper
 def nping_icmp_oneshot(parameters):
   try:
     target = parameters['target']
     message = parameters['message']
-    IOLoop.current().run_in_executor(
-      None,
-      lambda: subprocess.run(
-        ["sudo","nping","--icmp",target,"-c","1","--data-string",message],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-      )
+    subprocess.run(
+      ["sudo", "nping", "--icmp", target, "-c", "1", "--data-string", message],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
     )
+
   except Exception as e:
     logging.error('nping_icmp_oneshot error:',e)
 
+@async_wrapper
 def nping_icmp_flood(parameters):
   try:
     target = parameters['target']
     message = parameters['message']
     delay = parameters['delay']
     count = parameters['count']
-    IOLoop.current().run_in_executor(
-      None,
-      lambda: subprocess.run(
-        ["sudo","nping","--icmp",target,"-c",count,"--delay",delay,"--data-string",message],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-      )
+    subprocess.run(
+      ["sudo", "nping", "--icmp", target, "-c", count, "--delay", delay, "--data-string", message],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
     )
+
   except Exception as e:
     logging.error('nping_icmp_flood error:',e)
 
+@async_wrapper
 def nmap_scan(parameters):
   try:
-    call = ["sudo","nmap"]
+    call = ["sudo", "nmap"]
     if 'args' in parameters:
       for arg in parameters['args']:
         call.append(arg)
     call.append(parameters['target'])
-    IOLoop.current().run_in_executor(
-      None,
-      lambda: subprocess.run(
-        call,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-      )
+    subprocess.run(
+      call,
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
     )
   except Exception as e:
     logging.error('nmap scan error:',e)
 
 def availableNetworks():
-  ips={}
+  ips = []
   if_names = socket.if_nameindex()
   for if_name in if_names:
     try:
-      ip = {if_name[1]: ifaddresses(if_name[1])[AF_INET][0]['addr']}
-      ips.update(ip)
+      ips.append({
+        "interface": if_name[1],
+        "address": ifaddresses(if_name[1])[AF_INET][0]['addr']
+      })
     except:
       continue
-  return ips
+  return {"networks" : ips}
 
 def scanTarget(target_ip, timeout=0.5):
   try:
-    response = session.get(
+    response = requests.get(
       url=f"http://{target_ip}/?resource=state",
       timeout=timeout
     )
-    result = response.json()
-    return result
+    return response.json()
   except Exception as e:
     logging.error(f'scanTarget():{repr(e)}')
     return None
@@ -187,6 +197,7 @@ def worker(targets, q):
       targets.append(target)
     q.task_done()
 
+@async_wrapper
 def threadedScan(ip, concurrent=128):
   targets = []
   q = Queue(concurrent * 2)
@@ -197,6 +208,7 @@ def threadedScan(ip, concurrent=128):
   network = '.'.join(ip.split('.')[:3])
   if ip.split('.')[0] == '127':
     return { 'targets' : targets }
+  
   try:
     for i in range(255):
       target_ip = '.'.join([network, str(i)])
@@ -206,8 +218,8 @@ def threadedScan(ip, concurrent=128):
     q.join()
   except Exception as e:
     logging.error(f'threadedScan(): {repr(e)}')
-  finally:
-    return targets
+
+  return targets
 
 #===========================================================================
 # Request handlers
@@ -216,7 +228,7 @@ class SetHandler(RequestHandler):
   async def post(self):
 
     try:
-      request = json.loads(self.request.body.decode('utf-8'))
+      request = json_decode(self.request.body)
     except Exception as e:
       logging.error(f'SetHandler(), While parsing request body:{repr(e)}')
       self.set_status(400)
@@ -225,9 +237,9 @@ class SetHandler(RequestHandler):
     try:
       result = await IOLoop.current().run_in_executor(
         None,
-        lambda: session.post(
+        lambda: requests.post(
           url=f"http://{request['target']}" ,
-          data=json.dumps({"set": request['set']})
+          data=json.dumps(request)
         )
       )
       self.set_status(result.status_code)
@@ -241,7 +253,7 @@ class SetHandler(RequestHandler):
 class RunHandler(RequestHandler):
   async def post(self):
     try:
-      request = json.loads(self.request.body.decode('utf-8'))
+      request = json_decode(self.request.body)
     except Exception as e:
       logging.error(f'RunHandler() While parsing request: {repr(e)}')
       self.set_status(400)
@@ -249,21 +261,20 @@ class RunHandler(RequestHandler):
       return
 
     try:
-      request['parameters'].update({'target': request['target']})
 
       match request['command']:
         case 'nping_icmp_oneshot':
-          nping_icmp_oneshot(request['parameters'])
+          await nping_icmp_oneshot(request['parameters'])
         case 'nping_icmp_flood':
-          nping_icmp_flood(request['parameters'])
+          await nping_icmp_flood(request['parameters'])
         case 'tone':
-          sendTone(request['parameters'])
+          await sendTone(request['parameters'])
         case 'scan':
-          nmap_scan(request['parameters'])
+          await nmap_scan(request['parameters'])
         case 'start_ap':
-          start_ap(request['parameters'])
+          await start_ap(request['parameters'])
         case 'stop_ap':
-          stop_ap(request['parameters'])
+          await stop_ap(request['parameters'])
 
     except Exception as e:
       message = f"error parsing command: {repr(e)}"
@@ -281,7 +292,7 @@ class NetworksHandler(RequestHandler):
       message = f"Error while getting available networks: {repr(e)}"
       logging.error(message)
       self.set_status(500)
-      self.write({'details':message})
+      self.write({'details': message})
 
 class NetworkScanHandler(RequestHandler):
   async def get(self, network=None):
@@ -291,10 +302,7 @@ class NetworkScanHandler(RequestHandler):
         self.write({'details': 'URI missing network'})
         return
 
-      if not (targets := await IOLoop.current().run_in_executor(
-        None,
-        lambda: threadedScan(network)
-      )):
+      if not (targets := await threadedScan(network)):
         self.set_status(404)
         self.write({'details': f'Network {network} has no valid targets'})
         return
@@ -318,7 +326,7 @@ class TargetHandler(RequestHandler):
 
       response = await IOLoop.current().run_in_executor(
         None,
-        lambda: session.get(
+        lambda: requests.get(
           url=f"http://{target}/?resource=state",
           timeout=(2,2)
         )
@@ -343,7 +351,7 @@ class AccessPointHandler(RequestHandler):
 
       response = await IOLoop.current().run_in_executor(
         None,
-        lambda: session.get(
+        lambda: requests.get(
           url=f"http://{target}/?resource=aps",
           timeout=(2,2)
         )
@@ -370,26 +378,22 @@ class DefaultHandler(RequestHandler):
 #===========================================================================
 # Start and stop Access Point
 
+@async_wrapper
 def start_ap(parameters):
   try:
-    IOLoop.current().run_in_executor(
-      None,
-      lambda: session.post(
-        url=f"http://{parameters['target']}",
-        data=json.dumps({"action": "start_ap", "parameters" : parameters})
-      )
+    requests.post(
+      url=f"http://{parameters['target']}",
+      data=json.dumps({"action": "start_ap", "parameters" : parameters})
     )
   except Exception as e:
     logging.error(f"While setting up rogue AP on {parameters['target']}: {repr(e)}")
 
+@async_wrapper
 def stop_ap(parameters):
   try:
-    IOLoop.current().run_in_executor(
-      None,
-      lambda: session.post(
-        url=f"http://{parameters['target']}",
-        data=json.dumps({ "action": "stop_ap"})
-      )
+    requests.post(
+      url=f"http://{parameters['target']}",
+      data=json.dumps({ "action": "stop_ap"})
     )
   except Exception as e:
     logging.error(f"While stopping rogue AP on {parameters['target']}: {repr(e)}")
@@ -428,7 +432,7 @@ def make_app():
 if __name__ == "__main__":
 
   logging.basicConfig(
-    level=config('LOG_LEVEL', default=20, cast=int),
+    level=config('LOG_LEVEL', default=10, cast=int),
     format='[CONTROLLER] - %(levelname)s | %(message)s'
   )
 
@@ -437,8 +441,6 @@ if __name__ == "__main__":
   signal(SIGHUP, signalHandler)
 
   try:
-    generateWaveform()
-    session = requests.session()
     application = make_app()
     http_server = HTTPServer(application)
     http_server.listen(1337)

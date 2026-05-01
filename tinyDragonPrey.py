@@ -2,6 +2,7 @@
 
 import os
 import sys
+import re
 from signal import *
 from decouple import config
 import logging
@@ -12,11 +13,29 @@ import subprocess
 from tornado.web import Application, RequestHandler, StaticFileHandler
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
-import json
+from tornado.escape import json_decode
+
+from netifaces import AF_LINK,AF_INET, ifaddresses
+import socket
 
 from rpi_dragon import Dragon
 
 import traceback
+
+from functools import wraps
+from jinja2 import Environment, FileSystemLoader
+
+#================================================================
+# Specifically for use with Tornado
+
+def async_wrapper(func):
+  @wraps(func)
+  async def run(*args, **kwargs):
+    return await IOLoop.current().run_in_executor(
+      None,
+      lambda: func(*args, **kwargs)
+    )
+  return run
 
 #===========================================================================
 # Signal Handler / shutdown procedure
@@ -37,114 +56,147 @@ def shutdown():
 
 #===========================================================================
 
-
-def startRogueAP(parameters):
+@async_wrapper
+def startRogueAP(interface, parameters):
   try:
-    # stop monitor mode
-    if wlan1_monitor_mode:
-      setMonitorMode(False)
-    
     # use provided MAC, if none, pick a random one
-    if parameters['MAC']:
-      MAC = parameters['MAC']
-    else:
-      MAC = os.urandom(6).hex()
+    MAC = parameters['MAC'] if parameters['MAC'] else os.urandom(6).hex()
 
     #format the MAC Address to spoof
-    MAC = f'{MAC[:2]}:{MAC[2:4]}:{MAC[4:6]}:{MAC[6:8]}:{MAC[8:10]}:{MAC[10:12]}'
+    MAC = f"{MAC[:2]}:{MAC[2:4]}:{MAC[4:6]}:{MAC[6:8]}:{MAC[8:10]}:{MAC[10:12]}"
 
-    subprocess.run(
-      ["ip", "link", "set", "wlan1", "down"],
-      stdout=subprocess.DEVNULL,
-      stderr=subprocess.DEVNULL
-    )
-    
-    #spoof the address  
-    subprocess.run(
-      ["ip", "link", "set", "wlan1", "address", MAC],
-      stdout=subprocess.DEVNULL,
-      stderr=subprocess.DEVNULL
-    )
-
-    subprocess.run(
-      ["ip", "link", "set", "wlan1", "up"],
-      stdout=subprocess.DEVNULL,
-      stderr=subprocess.DEVNULL
-    )
-
-    subprocess.run(
-      ["systemctl", "stop", "hostapd"],
-      stdout=subprocess.DEVNULL,
-      stderr=subprocess.DEVNULL
-    )
-
-    # write new config from parameters
-    config = hostapdConfTemplate.format(
+    config = networkmanager_template.render(
+      interface=interface,
       ssid=parameters['SSID'],
-      channel=parameters['channel']
+      ip_address=parameters['ip_address'],
+      channel=parameters['channel'],
+      password=parameters['password'],
+      mac_address=MAC
     )
-    f = open('/etc/hostapd/hostapd.conf','w')
-    f.write(config)
-    f.close()
+    with open(f"/etc/NetworkManager/system-connections/{interface}.nmconnection", "w") as file:
+      file.write(config)
 
-    #start the AP if we're lucky...
     subprocess.run(
-      ["systemctl", "start", "hostapd"],
+      ["nmcli", "connection", "reload"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
+
+    subprocess.run(
+      ["mncli", "connection", "up", interface],
+      stdout=subprocess.DEVNULL,
+      stderr=subprocess.DEVNULL
+    )
+
   except Exception as e:
     pass
 
-def stopRogueAP():
+#----------------------------------------------------------------
+
+@async_wrapper
+def stopRogueAP(interface):
   try:
     subprocess.run(
-      ["systemctl", "stop", "hostapd"],
+      ["mncli", "connection", "down", interface],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
-    if wlan1_monitor_mode:
-      setMonitorMode(True)
   except:
     pass
 
-def setMonitorMode(enable):
+#----------------------------------------------------------------
 
-  if enable:
-    subprocess.run(
-      ["ip","link","set","wlan1","down"],
-      stdout=subprocess.DEVNULL,
-      stderr=subprocess.DEVNULL
-    )
-    subprocess.run(
-      ["iwconfig","wlan1","mode","monitor"],
-      stdout=subprocess.DEVNULL,
-      stderr=subprocess.DEVNULL
-    )
-    subprocess.run(
-      ["ip","link","set","wlan1","up"],
-      stdout=subprocess.DEVNULL,
-      stderr=subprocess.DEVNULL
-    )
-  else:
-    subprocess.run(
-      ["ip","link","set","wlan1","down"],
-      stdout=subprocess.DEVNULL,
-      stderr=subprocess.DEVNULL
-    )
-    subprocess.run([
-      "iwconfig","wlan1","mode","managed"],
-      stdout=subprocess.DEVNULL,
-      stderr=subprocess.DEVNULL
-    )
-    subprocess.run(
-      ["ip","link","set","wlan1","up"],
-      stdout=subprocess.DEVNULL,
-      stderr=subprocess.DEVNULL
-    )
+@async_wrapper
+def setMonitorMode(interface, enable):
+  subprocess.run(
+    ["ip", "link", "set", f"{interface}", "down"],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL
+  )
+  subprocess.run(
+    ["iwconfig", f"{interface}", "mode", f"{'monitor' if enable else 'managed'}"],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL
+  )
+  subprocess.run(
+    ["ip", "link", "set", f"{interface}", "up"],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL
+  )
 
-def checkWlan1Mode():
-  output = str(subprocess.check_output(["iwconfig","wlan1"]))
+#----------------------------------------------------------------
+
+@async_wrapper
+def availableInterfaces():
+  ips = []
+  if_names = socket.if_nameindex()
+  wireless_devices = getWifiDeviceInfo()
+  for if_name in if_names:
+    addresses = ifaddresses(if_name[1])
+    wifi_check = [device for device in wireless_devices if device['interface_name'] == if_name[1]]
+    wifi_device = wifi_check[0] if len(wifi_check) > 0 else None
+    ips.append({
+      "interface" : if_name[1],
+      "ip_address" : addresses[AF_INET][0]['addr'] if AF_INET in addresses else None,
+      "netmask" : addresses[AF_INET][0]['netmask'] if AF_INET in addresses else None,
+      "mac_address" : addresses[AF_LINK][0]['addr'] if AF_LINK in addresses else None,
+      "wireless_info" : wifi_device
+    })
+  return ips
+
+#----------------------------------------------------------------
+
+def getWifiDeviceInfo():
+  devices = []
+
+  phy_list = [
+    line
+    for line in subprocess.check_output(["iw","list"]).split(b'Wiphy ')
+    if len(line) > 0
+  ]
+
+  dev_list = [
+    line
+    for line in subprocess.check_output(["iw","dev"]).split(b'phy#')
+    if len(line) > 0
+  ]
+
+  if len(phy_list) != len(dev_list): raise Exception('WTH!?! different number of devs and phys')
+
+  for i in range(len(dev_list)):
+    dev_lines = [line.decode().lstrip() for line in dev_list[i].split(b'\n')]
+    device = {"index": int(dev_lines[0])}
+    for line in dev_lines:
+      line = line.split(' ')
+      if line[0] == "Interface":
+        device.update({"interface_name" : line[1]})
+      if line[0] == "addr":
+        device.update({"mac_address" : line[1]})
+
+    phy_lines = [ line.decode().replace('*','').lstrip() for line in phy_list[i].split(b'\n') if len(line) > 0]
+    
+    channels=[]
+    for line in phy_lines[phy_lines.index('Band 1:'):]:
+      if match := re.match(r'.*?\[(\d{1,3})\].*?', line):
+        channels.append(int(match[1]))
+
+    index_modes = phy_lines.index('Supported interface modes:')
+    index_band_1 = phy_lines.index('Band 1:')
+
+    device.update({
+      "physical_name" : phy_lines[0],
+      "modes" : phy_lines[index_modes+1:index_band_1],
+      "channels": channels
+    })
+
+    devices.append(device)
+  return devices
+
+#----------------------------------------------------------------
+
+@async_wrapper
+def checkWlanMode(interface):
+  output = str(subprocess.check_output(["iwconfig", f"{interface}"]))
   index = output.find("Mode:")
   index += len("Mode:")
   char = ""
@@ -154,10 +206,13 @@ def checkWlan1Mode():
     if char != " ":
       mode+=char
     index+=1
-  return mode == "Monitor"
+  return mode.to_lower()
 
-def checkWlan1Channel():
-  output = str(subprocess.check_output(["iwconfig", "wlan1"]))
+#----------------------------------------------------------------
+
+@async_wrapper
+def checkWlanChannel(interface):
+  output = str(subprocess.check_output(["iwconfig", f"{interface}"]))
   index = output.find("Frequency:")
   index += len("Frequency:")
   char=""
@@ -206,30 +261,35 @@ def checkWlan1Channel():
 
 #===========================================================================
 
-async def get_dragon_state():
-  if not (state := await IOLoop.current().run_in_executor(
-    None,
-    tinyDragon.get_state
-  )):
-    return None
+@async_wrapper
+def get_dragon_state():
+  return tinyDragon.get_state()
 
-  return {
-    "print" : state['enabled'],
-    "color" : state['color'],
-    "linebreaks" : state['linebreaks'],
-    "color_shift" : state['shift'],
-    "wlan1_monitor_mode" : checkWlan1Mode(),
-    "wlan1_channel" : checkWlan1Channel()
-  }
+#----------------------------------------------------------------
+
+@async_wrapper
+def get_access_points():
+  return tinyDragon.get_access_points()
 
 #===========================================================================
 # Request handlers
+
+class BaseHandler(RequestHandler):
+
+    def set_default_headers(self):
+        self.set_header("Access-Control-Allow-Origin", "*")
+        self.set_header("Access-Control-Allow-Headers", "x-requested-with")
+        self.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+
+    def options(self):
+        self.set_status(204)
+        self.finish()
 
 class DefaultHandler(RequestHandler):
   def prepare(self):
     self.set_status(404)
 
-class MainHandler(RequestHandler):
+class MainHandler(BaseHandler):
   async def get(self):
     resource = self.get_query_argument('resource', None)
 
@@ -240,87 +300,68 @@ class MainHandler(RequestHandler):
           return
         self.write(state)
       case "aps":
-        access_points = await IOLoop.current().run_in_executor(
-          None,
-          tinyDragon.get_access_points
-        )
+        access_points = await get_access_points()
         self.write(access_points)
       case _:
         self.set_status(400)
-        self.write({'details':'unrecognized argument value / BAD REQUEST'})
+        self.write({'details': 'unrecognized argument value / BAD REQUEST'})
   async def post(self):
     command = None
     try:
-      command = json.loads(self.request.body.decode('utf-8'))
+      command = json_decode(self.request.body)
     except Exception as e:
       self.set_status(400)
       self.write({'details': 'missing required body argument: command'})
       return
 
-    if 'set' in command:
-      match command['set']['parameter']:
-        case "print":
-          await IOLoop.current().run_in_executor(
-            None,
-            lambda: tinyDragon.writer.printEnable(command['set']['value'])
+    match command['attribute']:
+      case "print_enable":
+        if tinyDragon.writer:
+          tinyDragon.writer.printEnable(command['parameters']['value'])
+      case "color_enable":
+        if tinyDragon.writer:
+          tinyDragon.writer.colorEnable(command['parameters']['value'])
+      case "linebreaks_enable":
+        if tinyDragon.writer:
+          tinyDragon.writer.linebreaksEnable(command['parameters']['value'])
+      case "color_shift":
+        if tinyDragon.writer:
+          tinyDragon.writer.setColorShift(int(command['parameters']['value']))
+      case "wlan_monitor_mode":
+        await setMonitorMode(
+          command['parameters']['interface'],
+          command['parameters']['monitor']
+        )
+        if command['parameters']['monitor']:
+          await setWlanChannel(
+            command['parameters']['interface'],
+            command['parameters']['channel']
           )
-        case "color":
-          await IOLoop.current().run_in_executor(
-            None,
-            lambda: tinyDragon.writer.colorEnable(command['set']['value'])
+      case "wlan_channel":
+        await setWlanChannel(
+          command['parameters']['interface'],
+          command['parameters']['channel']
+        )
+      case 'start_ap': await startRogueAP(command['parameters'])
+      case 'stop_ap':
+        await stopRogueAP(command['parameters']['interface'])
+        await setMonitorMode(
+          command['parameters']['interface'],
+          command['parameters']['monitor']
           )
-        case "linebreaks":
-          await IOLoop.current().run_in_executor(
-            None,
-            lambda: tinyDragon.writer.ctlCharactersEnable(command['set']['value'])
-          )
-        case "color_shift":
-          await IOLoop.current().run_in_executor(
-            None,
-            lambda: tinyDragon.writer.setColorShift(int(command['set']['value'])),
-          )
-        case "wlan1_monitor_mode":
-          global wlan1_monitor_mode
-          wlan1_monitor_mode = command['set']['value']
-          await IOLoop.current().run_in_executor(
-            None,
-            lambda: setMonitorMode(wlan1_monitor_mode)
-          )
-          if wlan1_monitor_mode:
-            await IOLoop.current().run_in_executor(
-              None,
-              lambda: subprocess.run(
-                ["iwconfig", "wlan1", "channel", str(max(1, min(13, wlan1_channel)))],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-              )
-            )
-        case "wlan1_channel":
-          global wlan1_channel
-          wlan1_channel = int(command['set']['value'])
-          await IOLoop.current().run_in_executor(
-            None,
-            lambda: subprocess.run(
-              ["iwconfig", "wlan1", "channel", str(max(1, min(13, wlan1_channel)))],
-              stdout=subprocess.DEVNULL,
-              stderr=subprocess.DEVNULL
-            )
-          )
-      return
+        await setWlanChannel(
+          command['parameters']['interface'],
+          command['parameters']['channel']
+        )
 
-    if 'action' in command:
-      match command['action']:
-        case 'start_ap':
-          IOLoop.current().run_in_executor(
-            None,
-            lambda: startRogueAP(command['parameters'])
-          )
-        case 'stop_ap':
-          IOLoop.current().run_in_executor(
-            None,
-            stopRogueAP
-          )
-      return
+@async_wrapper
+def setWlanChannel(interface, channel):
+  logging.debug(f"channel: {channel}")
+  subprocess.run(
+    ["iwconfig", interface, "channel", str(max(1, min(13, channel)))],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL
+  )
 
 #===========================================================================
 # Executed when run as stand alone
@@ -336,8 +377,9 @@ def make_app():
 
 if __name__ == "__main__":
 
+
   logging.basicConfig(
-    level=config('LOG_LEVEL', default=20, cast=int),
+    level=config('LOG_LEVEL', default=10, cast=int),
     format='[TINY_DRAGON_PREY] - %(levelname)s | %(message)s'
   )
 
@@ -345,10 +387,18 @@ if __name__ == "__main__":
 
   try:
     debug = True
-    templatePath = os.path.dirname(os.path.abspath(__file__))
-    f = open(os.path.join(templatePath,'hostapd-conf.template'))
-    hostapdConfTemplate = f.read()
-    f.close()
+    templatePath = os.path.join(
+      os.path.dirname(os.path.abspath(__file__)),
+      'templates'
+    )
+
+    logging.debug(f"templatePath: {templatePath}")
+
+    env = Environment(loader = FileSystemLoader(
+      templatePath,
+      followlinks = True
+    ))
+    networkmanager_template = env.get_template('networkmanager-conf.jinja')
 
     signal(SIGINT, signalHandler)
     signal(SIGTERM, signalHandler)
@@ -367,9 +417,6 @@ if __name__ == "__main__":
       log_aps = True
     )
     tinyDragon.start()
-
-    wlan1_monitor_mode = checkWlan1Mode()
-    wlan1_channel = checkWlan1Channel()
 
     # run the main loop
     application = make_app()

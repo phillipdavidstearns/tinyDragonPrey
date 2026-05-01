@@ -18,21 +18,21 @@ Imagine that you cannot see. You are in an unfamiliar forest. Once the disorient
 
 Here Be Dragons involved three core elements:
 
-1. Remote [Honeypot](https://en.wikipedia.org/wiki/Honeypot_(computing)) Servers
-2. A VPN
+1. Remote [honeypot](https://en.wikipedia.org/wiki/Honeypot_(computing)) servers.
+2. A VPN to securely link infrastructure nodes.
 3. Raspberry Pis running software to translate network packets into audio.
 
 ### tinyDragons
 
-Here Be Dragons used 8 Raspberry Pis to convert into sound the malicious network traffic of 15 honeypot servers deployed globally. Opportunities to present the work in different contexts with fewer speakers or on headphones came up. The Raspberry Pis then became my dragons.
+Here Be Dragons used 8 Raspberry Pis to convert into sound the malicious network traffic of 15 honeypot servers deployed globally. Opportunities to present the work in different contexts with fewer speakers or on headphones came up. The Raspberry Pis then became my tinyDragons. 
 
 ### packet2audio
 
-The software translating the traffic to audio is [packet2audio](https://github.com/phillipdavidstearns/packet2audio). It's gone through several revisions and is due for another update, but the principle is simple:
+The software translating the traffic to audio was [`packet2audio`](https://github.com/phillipdavidstearns/packet2audio). It's gone through several revisions, expansions and is due for another update, but the principle is simple:
 
 Open a raw socket, grab available packets as they are available and feed them into an audio stream buffer.
 
-So any network interface that can be opened as a raw socket can be hooked up to the audio interface, including wireless adapters!
+Any network interface that can be opened as a raw socket can be hooked up to the audio interface, including wireless adapters.
 
 ### SYN/ACK 
 
@@ -42,7 +42,7 @@ While developing the software for Here Be Dragons, I started rehearsing with the
 
 Is the next evolution of the tinyDragons and a continuation of the performance SYN/ACK. It has been developed especially for [NOT.GLI.TC/H](https://not.gli.tc/h/) @ [TRITRIANGLE](https://tritriangle.net/events/event/not-gli-tc-h/).
 
-The familiar dragons are now running tinyDragonPrey, which includes a web server that incorporates and provides some interactivity with an updated version of packet2audio.
+The familiar dragons are now running tinyDragonPrey, which includes a web server that incorporates and provides some interactivity with an updated version of `packet2audio`, [`rpi-dragon`](https://github.com/phillipdavidstearns/rpi-dragon).
 
 In previous performances of SYN/ACK, port scans, vulnerability exploits, and brute force login attempts were performed from my laptop, using tools and frameworks like Metasploit directly from the command line, with only a handful of rudimentary scripts at my disposal. I would also place the tinyDragons into monitor mode and audify the ambient wifi traffic.
 
@@ -55,12 +55,14 @@ Part of developing tinyDragonPrey, was to create a more performance friendly int
 * enabling/disabling printing packets to the console
 * enabling/disabling colorizing the background of printed characters based on the byte value represented
 * setting an offset value for that background color
-* deploying a rogue access point using SSIDs sniffed from probe requests while in monitor mode
+* deploying rogue access points using
+	* SSIDs sniffed from probe requests while in monitor mode
+	* APs loaded from a JSON file (in progress)
 
-**On the tinyDragon:**
+**On the Controller machine:**
 
 * one-shot and flood ICMP pings with `nping` and custom message or waveform payloads
-* launching several different flavors of `nmap` scans
+* launch several different flavors of `nmap` scans
 
 Any other vulnerability scanning and exploitation will happen from the command line via metasploit, etc.
 
@@ -70,11 +72,12 @@ Any other vulnerability scanning and exploitation will happen from the command l
 
 ## Resources:
 
-[Setup a Raspberry Pi to run a Web Browser in Kiosk Mode](https://die-antwort.eu/techblog/2017-12-setup-raspberry-pi-for-kiosk-mode/)
+[Setup a Raspberry Pi to run a Web Browser in Kiosk Mode](https://die-antwort.eu/techblog/2017-12-setup-raspberry-pi-for-kiosk-mode/)(if console output is necessary)
+
 
 ## You'll Need:
 
-1. Raspberry Pi 3B+ and power supply
+1. Raspberry Pi (tested on: 3B+, Zero W, 4B+) and power supply
 1. Monitor with HDMI connection and HDMI cable
 1. A way to connect the Raspberry Pi to the internet (ethernet cable or wifi) via your local network
 
@@ -99,7 +102,7 @@ With Raspi OS Bullseye, everything changed regarding setup...
   
 ### Configuring users
 
-We need to setup a general user for the device to boot into and auto login, "toe". If the kiosk is escaped or crashes to the command line, we want this user to be able to restart the application or reboot, but not much else. We also want to setup an admin user, "admin" that will have the ability to use `sudo`, but not `sudo su`.
+We need to setup a general user for the device to boot into and auto login. If the kiosk is escaped or crashes to the command line, we want this user to be able to restart the application or reboot, but not much else. We also want to setup an admin user, "admin" that will have the ability to use `sudo`, but not `sudo su`.
 
 1. login: `ssh me@tinyDragonPrey-0X` 
 1. Create a new "user" user: `sudo useradd -m user`
@@ -162,7 +165,7 @@ admin   ALL = (ALL) NOPASSWD: ALL, !/bin/su
 
 The kiosk will run on Openbox, which uses xServer. Chromium browser will be served in the window and access the Theories of Everything hosted on a local server built on the Tornado Web Framework for Python.
 
-`sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install -y wireguard git python3-pyaudio python3-tornado python3-decouple`
+`sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install -y git python3-dev`
 
 ### Disable the splash and console text:
 
@@ -186,7 +189,9 @@ Phillip David Stearns 2023
 
 ```
 
-### Setup Wireguard
+### Setup Wireguard (if remote access is needed)
+
+`sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install -y wireguard`
 
 1. `cd`
 1. `mkdir .wireguard`
@@ -244,9 +249,121 @@ ON CLIENT
 sudo tinyDragonPrey
 ```
 
+## Setting up python
+
+1. `git clone <rpi-dragon-repo>`
+1. `git clone <tiny-dragon-prey-repo>`
+1. `python3 -m venv venv`
+1. `source venv/bin/activate`
+1. `pip install tornado python-decouple netifaces pyaudio jinja2`
+1. `pip install -e ./rpi-dragon`
+1. `sudo ln -s ~/tinyDragonPrey /usr/local/src/`
+1. `sudo ln -s ~/venv /usr/local/src/`
+
 ### WiFi AP Setup
 
-1. `sudo apt-get install -y hostapd dnsmasq netfilter-persistent iptables-persistent`
+To make sure the onboard wireless adapter is always `wlan0`:
+
+1. `sudo raspi-config nonint do_net_names 0`
+1. `sudo reboot`
+
+This makes the USB wifi adapters show up as `wlxaabbccddeeff` where `aabbccddeeff` is the MAC address stripped of colons and converted to lower case.
+
+In 2026, RaspiOS does dome annoying things. Basically you need to set a country code if you want to permanently unblock rf devices.
+
+1. `sudo raspi-config nonint do_wifi_country XX` where XX is your country code.
+1. `sudo rfkill unblock all` will now stick after reboot...
+
+### Enable Packet Forwarding
+
+1. Install: `sudo apt update && sudo apt install netfilter-persistent iptables-persistent -y`
+1. `sudo systemctl enable netfilter-persistent.service`
+1. `sudo nano /etc/sysctl.d/routed-ap.conf` to enable packet forwarding
+
+```
+net.ipv4.ip_forward=1
+```
+
+1. `sudo sysctl -p /etc/sysctl.d/routed-ap.conf`
+1. Setup packet routing:
+
+```
+sudo iptables -t nat -A POSTROUTING -o <OUTOUT_INTERFACE> -j MASQUERADE
+sudo netfilter-persistent save
+```
+
+### NEW WAY: NetworkManager
+
+Helpful Forum Thread: [https://forums.raspberrypi.com/viewtopic.php?t=357998](https://forums.raspberrypi.com/viewtopic.php?t=357998)
+
+Docs: [https://www.networkmanager.dev/docs/api/latest/](https://www.networkmanager.dev/docs/api/latest/)
+
+1. Install dsnmasq: `sudo apt update && sudo apt install dnsmasq -y`
+1. Stop it: `sudo systemctl stop dsnmasq`
+1. Disable it: `sudo systemctl disable dsnmasq`
+
+Tell Network Manager to use `dnsmasq`.
+
+1. Add to `/etc/NetworkManager/NetworkManager.conf`:
+
+```
+[main]
+dns=dnsmasq
+```
+
+Most documentation hints that configuration should take place via `nmcli`, but if you're trying to provision several devices, you really want to be able to use a templated config file. Here's my draft jinja2 template: 
+
+```
+[connection]
+id={{interface}}
+type=wifi
+interface-name={{interface}}
+autoconnect=false
+
+[wifi]
+band=bg
+channel={{channel}}
+mode=ap
+powersave=2
+ssid={{ssid}}
+
+[wifi-security]
+{% if password %}
+  key-mgmt=wpa-psk
+  pairwise=ccmp
+  group=ccmp
+  proto=rsn
+  psk={password}
+{% else %}
+  key-mgmt=none
+  auth-alg=none
+{% endif %}
+
+[ipv4]
+address1={ip_address}/24
+gateway={ip_address}
+method=shared
+
+[ipv6]
+addr-gen-mode=default
+method=disabled
+
+```
+
+### The Old Way: hostapd, dhcpcd, dnsmasq
+
+RaspiOS now defaults to NetworkManager. I didn't have time to figure out how to configure static IP addresses for the wlan interfaces, so had to configure it to keep it from messing with wlan1 and wlan2:
+
+1. `sudo nano /etc/NetworkManager/conf.d/99-unmanaged-devices.conf`
+
+```
+[keyfile]
+unmanaged-devices=interface-name:wlan1;interface-name:wlan2
+```
+
+Now we can carry on like before...
+
+1. `sudo apt-get install -y dhcpcd hostapd dnsmasq`
 1. `sudo systemctl unmask hostapd`
 1. `sudo systemctl disable hostapd`
 1. `sudo nano /etc/dhcpcd.conf` and add to the end:
@@ -255,45 +372,72 @@ sudo tinyDragonPrey
 interface wlan1
     static ip_address=10.10.20.1/24
     nohook wpa_supplicant
+
+interface wlan2
+    static ip_address=10.10.30.1/24
+    nohook wpa_supplicant
 ```
 
-1. `sudo nano /etc/sysctl.d/routed-ap.conf` to enable packet forwarding
-
-```
-net.ipv4.ip_forward=1
-```
-
-1. Setup packet routing
-
-```
-sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-sudo netfilter-persistent save
-```
-
-1. make a copy of the default config file: `sudo cp /etc/dnsmasq.conf{,.bak}`
-1. configure dnsmasq: `sudo nano /etc/dnsmasq.conf`
+1. configure dnsmasq: `sudo nano /etc/dnsmasq.d/wlan1.conf`
 
 ```
 interface=wlan1
-dhcp-range=10.10.20.5,10.10.20.250,255.255.255.0,24h
+
+bind-interfaces
+domain-needed
+bogus-priv
+expand-hosts
+
+dhcp-range=interface:wlan1,10.10.20.5,10.10.20.250,255.255.255.0,24h
+
 domain=wlan
 address=/gw.wlan/10.10.20.1
+
 # Specify the default route
-dhcp-option=3,10.10.20.1
+dhcp-option=interface:wlan1,3,10.10.20.1
+
 # Specify the DNS server address
-dhcp-option=6,10.10.20.1
+dhcp-option=interface:wlan1,6,10.10.20.1
+
 # Set the DHCP server to authoritative mode.
 dhcp-authoritative
 ```
-1. enable wifi just in case `sudo rfkill unblock wlan`
+
+1. configure dnsmasq: `sudo nano /etc/dnsmasq.d/wlan2.conf`
+
+```
+interface=wlan2
+
+bind-interfaces
+domain-needed
+bogus-priv
+expand-hosts
+
+dhcp-range=interface:wlan2,10.10.30.5,10.10.30.250,255.255.255.0,24h
+
+domain=wlan
+address=/gw.wlan/10.10.30.1
+
+# Specify the default route
+dhcp-option=interface:wlan2,3,10.10.30.1
+
+# Specify the DNS server address
+dhcp-option=interface:wlan2,6,10.10.30.1
+
+# Set the DHCP server to authoritative mode.
+dhcp-authoritative
+```
+
 1. `sudo nano /etc/hostapd/hostapd.conf`
 
 ```
 country_code=US
 interface=wlan1
 driver=nl80211
+ieee80211d=1
 ieee80211n=1
-wmm_enabled=0
+ieee80211ac=1
+wmm_enabled=1
 ssid=tinyDragonPrey
 hw_mode=g
 channel=5
