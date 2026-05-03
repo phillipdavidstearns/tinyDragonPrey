@@ -183,9 +183,10 @@ def scanTarget(target_ip, timeout=0.5):
       timeout=timeout
     )
     return response.json()
+  except requests.exceptions.Timeout:
+    logging.info(f'scanTarget(): Connection to {target_ip} timed out at {timeout}s.')
   except Exception as e:
-    logging.error(f'scanTarget():{repr(e)}')
-    return None
+    logging.error(f'scanTarget(): {repr(e)}')
 
 def worker(targets, q):
   while True:
@@ -223,6 +224,71 @@ def threadedScan(ip, concurrent=128):
 
 #===========================================================================
 # Request handlers
+
+class GetHandler(RequestHandler):
+  async def get(self):
+
+    if not (resource := self.get_query_argument('resource', None)):
+      self.set_status(400)
+      self.write({'details': 'URI missing resource'})
+      return
+    if not (target := self.get_query_argument('target', None)):
+      self.set_status(400)
+      self.write({'details': 'URI missing target'})
+      return
+
+    match resource:
+      case 'state':
+        try:
+          if response := await IOLoop.current().run_in_executor(
+            None,
+            lambda: requests.get(
+              url=f"http://{target}/?resource=state",
+              timeout=(2,2)
+            )
+          ):
+            self.write(response.json())
+        except Exception as e:
+          self.set_status(500)
+          logging.error(e)
+
+      case 'socket_state':
+        if not (index := self.get_query_argument('index', None)):
+          self.set_status(400)
+          self.write({'details': 'URI missing index'})
+          return
+
+        try:
+          if response := await IOLoop.current().run_in_executor(
+            None,
+            lambda: requests.get(
+              url=f"http://{target}/?resource=socket_state&index={index}",
+              timeout=(2,2)
+            )
+          ):
+            self.write(response.json())
+        except Exception as e:
+          self.set_status(500)
+          logging.error(e)
+
+      case 'interface_state':
+        if not (interface := self.get_query_argument('interface', None)):
+          self.set_status(400)
+          self.write({'details': 'URI missing interface'})
+          return
+
+        try:
+          if response := await IOLoop.current().run_in_executor(
+            None,
+            lambda: requests.get(
+              url=f"http://{target}/?resource=interface_state&interface={interface}",
+              timeout=(2,2)
+            )
+          ):
+            self.write(response.json())
+        except Exception as e:
+          self.set_status(500)
+          logging.error(e)
 
 class SetHandler(RequestHandler):
   async def post(self):
@@ -315,31 +381,6 @@ class NetworkScanHandler(RequestHandler):
       self.set_status(500)
       self.write({'details': message})
 
-class TargetHandler(RequestHandler):
-  async def get(self, target=None):
-    state = {}
-    try:
-      if not target:
-        self.set_status(400)
-        self.write({'details': 'URI missing target'})
-        return
-
-      response = await IOLoop.current().run_in_executor(
-        None,
-        lambda: requests.get(
-          url=f"http://{target}/?resource=state",
-          timeout=(2,2)
-        )
-      )
-      state = response.json()
-      state['online'] = True
-
-    except:
-      state['online'] = False
-
-    finally:
-      self.write(state)
-
 class AccessPointHandler(RequestHandler):
   async def get(self):
     aps = {}
@@ -421,10 +462,10 @@ def make_app():
   urls = [
     (r'/', MainHandler),
     (r'/set', SetHandler),
+    (r'/get', GetHandler),
     (r'/run', RunHandler),
     (r'/networks', NetworksHandler),
     (r'/network-scan/(.*)', NetworkScanHandler),
-    (r'/target/(.*)', TargetHandler),
     (r'/access-point', AccessPointHandler)
   ]
   return Application(urls, **settings)

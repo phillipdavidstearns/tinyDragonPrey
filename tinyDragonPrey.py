@@ -77,13 +77,13 @@ def startRogueAP(interface, parameters):
       file.write(config)
 
     subprocess.run(
-      ["nmcli", "connection", "reload"],
+      ["sudo", "nmcli", "connection", "reload"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
 
     subprocess.run(
-      ["mncli", "connection", "up", interface],
+      ["sudo", "mncli", "connection", "up", interface],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
@@ -97,7 +97,7 @@ def startRogueAP(interface, parameters):
 def stopRogueAP(interface):
   try:
     subprocess.run(
-      ["mncli", "connection", "down", interface],
+      ["sudo", "mncli", "connection", "down", interface],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
@@ -108,18 +108,31 @@ def stopRogueAP(interface):
 
 @async_wrapper
 def setMonitorMode(interface, enable):
+  logging.debug(f"setMonitorMode({interface}, {enable})")
+ 
   subprocess.run(
-    ["ip", "link", "set", f"{interface}", "down"],
+    ["sudo", "ip", "link", "set", interface, "down"],
     stdout=subprocess.DEVNULL,
     stderr=subprocess.DEVNULL
   )
   subprocess.run(
-    ["iwconfig", f"{interface}", "mode", f"{'monitor' if enable else 'managed'}"],
+    ["sudo", "iwconfig", interface, "mode", "monitor" if enable else "managed"],
     stdout=subprocess.DEVNULL,
     stderr=subprocess.DEVNULL
   )
   subprocess.run(
-    ["ip", "link", "set", f"{interface}", "up"],
+    ["sudo", "ip", "link", "set", interface, "up"],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL
+  )
+
+#----------------------------------------------------------------
+
+@async_wrapper
+def setWlanChannel(interface, channel):
+  logging.debug(f"interface: {interface}, channel: {channel}")
+  subprocess.run(
+    ["sudo", "iwconfig", interface, "channel", str(max(1, min(14, channel)))],
     stdout=subprocess.DEVNULL,
     stderr=subprocess.DEVNULL
   )
@@ -128,21 +141,21 @@ def setMonitorMode(interface, enable):
 
 @async_wrapper
 def availableInterfaces():
-  ips = []
+  interfaces = []
   if_names = socket.if_nameindex()
   wireless_devices = getWifiDeviceInfo()
   for if_name in if_names:
     addresses = ifaddresses(if_name[1])
     wifi_check = [device for device in wireless_devices if device['interface_name'] == if_name[1]]
     wifi_device = wifi_check[0] if len(wifi_check) > 0 else None
-    ips.append({
+    interfaces.append({
       "interface" : if_name[1],
       "ip_address" : addresses[AF_INET][0]['addr'] if AF_INET in addresses else None,
       "netmask" : addresses[AF_INET][0]['netmask'] if AF_INET in addresses else None,
       "mac_address" : addresses[AF_LINK][0]['addr'] if AF_LINK in addresses else None,
       "wireless_info" : wifi_device
     })
-  return ips
+  return interfaces
 
 #----------------------------------------------------------------
 
@@ -196,7 +209,7 @@ def getWifiDeviceInfo():
 
 @async_wrapper
 def checkWlanMode(interface):
-  output = str(subprocess.check_output(["iwconfig", f"{interface}"]))
+  output = str(subprocess.check_output(["iwconfig", interface]))
   index = output.find("Mode:")
   index += len("Mode:")
   char = ""
@@ -206,13 +219,13 @@ def checkWlanMode(interface):
     if char != " ":
       mode+=char
     index+=1
-  return mode.to_lower()
+  return mode.lower()
 
 #----------------------------------------------------------------
 
 @async_wrapper
 def checkWlanChannel(interface):
-  output = str(subprocess.check_output(["iwconfig", f"{interface}"]))
+  output = str(subprocess.check_output(["iwconfig", interface]))
   index = output.find("Frequency:")
   index += len("Frequency:")
   char=""
@@ -261,15 +274,33 @@ def checkWlanChannel(interface):
 
 #===========================================================================
 
-@async_wrapper
-def get_dragon_state():
-  return tinyDragon.get_state()
+async def get_socket_state(index):
+  socket_state = tinyDragon.get_socket_state(index)
+
+  wireless_devices = getWifiDeviceInfo()
+  wifi_check = [device for device in wireless_devices if device['interface_name'] == socket_state['interface']]
+  if wifi_device := wifi_check[0] if len(wifi_check) > 0 else None:
+    wifi_device.update({
+      'current_mode' : await checkWlanMode(socket_state['interface']),
+      'current_channel' : await checkWlanChannel(socket_state['interface'])
+    })
+  socket_state.update({'wifi_info': wifi_device})
+  return socket_state
 
 #----------------------------------------------------------------
 
 @async_wrapper
 def get_access_points():
   return tinyDragon.get_access_points()
+
+@async_wrapper
+def get_dragon_state():
+  return tinyDragon.get_state()
+
+@async_wrapper
+def set_socket_interface(index, interface):
+  logging.debug(f"set_socket_interface({index}, {interface})")
+  tinyDragon.set_socket_interface(index, interface)
 
 #===========================================================================
 # Request handlers
@@ -298,13 +329,53 @@ class MainHandler(BaseHandler):
         if not (state := await get_dragon_state()):
           self.set_status(400)
           return
+        interfaces = await availableInterfaces()
+        state.update({"interfaces" : interfaces})
         self.write(state)
+      case "interfaces":
+        if not (interfaces := await availableInterfaces()):
+          self.set_status(400)
+          return
+        self.write({"interfaces" : interfaces})
+      case "interface_state":
+        if not (interface := self.get_query_argument('interface', None)):
+          self.set_status(400)
+          return
+        if not (interfaces := await availableInterfaces()):
+          self.set_status(400)
+          return
+
+        matches = [iface for iface in interfaces if iface['interface'] == interface ]
+
+        logging.debug(f"matches for {interface}: {matches}")
+
+        if len(matches) == 0:
+          self.set_status(404)
+          return
+
+        self.write({
+          'state': {
+            'interface' : interface,
+            'mode' : await checkWlanMode(interface),
+            'channel' : await checkWlanChannel(interface)
+          }
+        })
+      case "socket_state":
+        if not (index := self.get_query_argument('index', None)):
+          self.set_status(400)
+          return
+        if not (state := await get_socket_state(int(index))):
+          self.set_status(400)
+          return
+        self.write({'state': state})
+ 
       case "aps":
         access_points = await get_access_points()
         self.write(access_points)
       case _:
         self.set_status(400)
         self.write({'details': 'unrecognized argument value / BAD REQUEST'})
+
   async def post(self):
     command = None
     try:
@@ -327,6 +398,11 @@ class MainHandler(BaseHandler):
       case "color_shift":
         if tinyDragon.writer:
           tinyDragon.writer.setColorShift(int(command['parameters']['value']))
+      case "socket_interface":
+        await set_socket_interface(
+          index = command['parameters']['index'],
+          interface = command['parameters']['interface']
+        )
       case "wlan_monitor_mode":
         await setMonitorMode(
           command['parameters']['interface'],
@@ -353,15 +429,6 @@ class MainHandler(BaseHandler):
           command['parameters']['interface'],
           command['parameters']['channel']
         )
-
-@async_wrapper
-def setWlanChannel(interface, channel):
-  logging.debug(f"channel: {channel}")
-  subprocess.run(
-    ["iwconfig", interface, "channel", str(max(1, min(13, channel)))],
-    stdout=subprocess.DEVNULL,
-    stderr=subprocess.DEVNULL
-  )
 
 #===========================================================================
 # Executed when run as stand alone

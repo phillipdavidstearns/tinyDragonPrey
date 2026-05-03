@@ -5,6 +5,7 @@
 
   var apLists = {};
   var targetList;
+  var selectedInterfaces = {};
 
   window.addEventListener('load', async function() {
     await updateNetworkList();
@@ -18,6 +19,43 @@
     'DEN Airport Free WiFi',
     'DEN Airport Free WiFi 2.4',
   ]
+
+  //----------------------------------------------------------------
+  // HTML node menu
+
+  const row = document.createElement('div');
+  row.setAttribute('class', 'row align-items-center justify-content-center text-center');
+
+  const col = document.createElement('div');
+  col.setAttribute('class', 'col text-center');
+
+  const formToggleDiv = document.createElement('div');
+  formToggleDiv.setAttribute('class','d-inline-block form-check form-switch');
+
+  const formCheckDiv = document.createElement('div');
+  formCheckDiv.setAttribute('class','form-check');
+
+  const toggle = document.createElement('input');
+  toggle.setAttribute('class', 'form-check-input m-1');
+  toggle.setAttribute('type', 'checkbox');
+
+  const hr = document.createElement('hr');
+
+  const formCheckLabel = document.createElement('label');
+  formCheckLabel.setAttribute('class','form-check-label m-1');
+
+  const formLabel = document.createElement('label');
+  formLabel.setAttribute('class','form-label m-1');
+
+  const range = document.createElement('input');
+  range.setAttribute('type', 'range');
+  range.setAttribute('class', 'form-range m-1');
+
+  const button = document.createElement('button');
+  button.setAttribute('class', 'btn btn-sm btn-outline-secondary m-1');
+
+  const select = document.createElement('select');
+  select.setAttribute('class','form-select m-1');
 
   //----------------------------------------------------------------
 
@@ -55,26 +93,26 @@
 
   //----------------------------------------------------------------
 
-  async function updateAPSelect(target_ip){
+  async function updateAPSelect(target_ip, index){
     await fetch(
-      `access-point?target=target_ip`,
+      `access-point?target=${target_ip}`,
       {method: 'GET'}
     )
     .then(async (response) => await response.json())
     .then((ap_list) => {
-      let select = document.getElementById(`${target_ip}-ssid-select`);
+      let select = document.getElementById(`${target_ip}-ssid-select-${index}`);
       removeOptions(select);
       let option;
 
-      if (!ap_list.online){
-        option = document.createElement('option');
-        option.textContent = 'unreachable';
-        select.appendChild(option);
-        select.disabled = true; 
-        return
-      }
+      // if (!ap_list.online){
+      //   option = document.createElement('option');
+      //   option.textContent = 'unreachable';
+      //   select.appendChild(option);
+      //   select.disabled = true; 
+      //   return
+      // }
 
-      apLists[target_ip]=ap_list;
+      apLists[target_ip] = ap_list;
       for(let k = 0 ; k < networkSSIDs.length; k++){
         option = document.createElement('option');
         option.setAttribute('value', networkSSIDs[k]);
@@ -96,8 +134,12 @@
 
   //----------------------------------------------------------------
 
-  async function updateStatus(ip){
-    await fetch(`target/${ip}`, {method: 'GET'})
+  async function updateStatus(ip, index){
+
+    await updateInterfaceSection(ip, 0);
+    await updateInterfaceSection(ip, 1);
+
+    await fetch(`get?resource=state&target=${ip}`, {method: 'GET'})
     .then(async (response) => await response.json())
     .then((state) => {
 
@@ -111,9 +153,6 @@
       document.getElementById(`${ip}-linebreaks-toggle`).checked = state.linebreaks_enable;
       document.getElementById(`${ip}-color-shift-range`).value = state.color_shift;
       document.getElementById(`${ip}-color-shift`).textContent = state.color_shift;
-      // document.getElementById(`${target.ip}-monitor-toggle`).checked = state.wlan_monitor_mode;
-      // document.getElementById(`${target.ip}-channel-range`).value = state.wlan1_channel;
-      // document.getElementById(`${target.ip}-channel`).textContent = state.wlan1_channel;
       document.getElementById(`${ip}-title`).textContent = ip;
 
     })
@@ -143,44 +182,306 @@
     .catch(error => console.error(error));
   }
 
+  //----------------------------------------------------------------
+
+  async function getInterfaceState(ip, iface){
+    return await fetch(`get?target=${ip}&resource=interface_state&interface=${iface}`, {method: 'GET'})
+    .then(async (response) => await response.json())
+    .catch(error => console.error(error));
+  }
+
+  async function updateInterfaceSection(ip, index){
+    const socket_state = await fetch(`get?resource=socket_state&target=${ip}&index=${index}`)
+    .then(async response => await response.json())
+    .then(({state})=> {return state})
+    .catch(error => console.error(error));
+
+    console.log('socket_state', socket_state);
+    if (!socket_state) return;
+
+    selectedInterfaces[ip][`socket${index}`] = socket_state.interface;
+
+    /* need to know:
+    1. socket information
+      1. interface name
+      2. is the socket open?
+    2. interface information
+      1. is it a wireless interface?
+        1. current mode
+        2. current channel
+    */
+
+    const monitorModeToggle = document.getElementById(`${ip}-monitor-toggle-${index}`);
+    const channelRange = document.getElementById(`${ip}-channel-range-${index}`);
+    const channelIntervalRange = document.getElementById(`${ip}-channel-interval-range-${index}`);
+    const channelIntervalToggle = document.getElementById(`${ip}-channel-interval-toggle-${index}`);
+    const channelIndicator = document.getElementById(`${ip}-channel-${index}`);
+    const rogueAPToggle = document.getElementById(`${ip}-ap-toggle-${index}`);
+    const rogueAPSelect = document.getElementById(`${ip}-ssid-select-${index}`);
+    const rogueAPButton = document.getElementById(`${ip}-ssid-button-${index}`);
+
+    if (socket_state.wifi_info === null){
+      monitorModeToggle.disabled = true;
+      channelRange.disabled = true;
+      channelIntervalRange.disabled = true;
+      channelIntervalToggle.disabled = true;
+      channelIndicator.textContent='-';
+      rogueAPToggle.disabled = true;
+      rogueAPSelect.disabled = true;
+      rogueAPButton.disabled = true;
+    } else {
+      monitorModeToggle.disabled = ! new Set(socket_state.wifi_info.modes).has('monitor');
+      monitorModeToggle.checked = socket_state.wifi_info.current_mode === "monitor";
+      channelRange.disabled = false;
+      channelRange.value = socket_state.wifi_info.current_channel;
+      channelIndicator.textContent=socket_state.wifi_info.current_channel;
+      channelIntervalRange.disabled = false;
+      channelIntervalToggle.disabled = false;
+      rogueAPToggle.disabled = false;
+      rogueAPSelect.disabled = false;
+      rogueAPButton.disabled = false;
+    }
+  }
+
+  //----------------------------------------------------------------
+
+  function createWifiRows(target){
+    console.log("target", target);
+    var interfaceDivs = [];
+
+    for(let i = 0; i < target.state.audio_channels; i++){
+      var socket = target.state.sockets.sockets[i];
+
+      var interfaceDiv = document.createElement('div');
+        var titleRow = row.cloneNode();
+        titleRow.textContent = `Socket ${i+1} interface:`;
+          var interfaceCol = col.cloneNode();
+            var interfaceSelect = select.cloneNode();
+            interfaceSelect.setAttribute('id', `${target.ip}-interface-select-${i}`);
+
+            var option = document.createElement('option');
+            option.value = "";
+            option.textContent = "choose an interface";
+            interfaceSelect.appendChild(option);
+
+            target.state.interfaces.forEach(iface => {
+              var option = document.createElement('option');
+              option.setAttribute('value', iface['interface']);
+              option.textContent=`${iface['interface']}`;
+              interfaceSelect.appendChild(option);
+              if(iface.interface === socket.interface){
+                interfaceSelect.value = iface.interface;
+              }
+            });
+
+            interfaceSelect.addEventListener('change', async (e) => {
+              if (! e.target.value) return;
+              // const state = await getInterfaceState(target.ip, e.target.value);
+              // console.log(`state of ${target.ip}'s ${e.target.value} interface:`, state);
+
+              var command = {
+                "target" : target.ip,
+                "attribute" : "socket_interface",
+                "parameters" : {
+                  "interface" : e.target.value,
+                  "index" : i
+                }
+              };
+              await fetch(`set`, {
+                method: "POST",
+                body: JSON.stringify(command)
+              });
+              await updateInterfaceSection(target.ip, i);
+            });
+
+          interfaceCol.appendChild(interfaceSelect);
+        titleRow.appendChild(interfaceCol);
+      interfaceDiv.appendChild(titleRow);
+
+        var wifiRow = row.cloneNode();
+          var wifiMonitorCol = col.cloneNode();
+            var wifiMonitorToggleDiv = formToggleDiv.cloneNode();
+              var wifiMonitorToggle = toggle.cloneNode();
+              wifiMonitorToggle.setAttribute('id',`${target.ip}-monitor-toggle-${i}`);
+              wifiMonitorToggle.addEventListener('change', async (e) => {
+                e.target.disabled = true;
+                var command = {
+                  "target" : target.ip,
+                  "attribute" : "wlan_monitor_mode",
+                  "parameters" : {
+                    "interface" : null || selectedInterfaces[target.ip][`socket${i}`],
+                    "monitor" : e.target.checked,
+                    "channel" : parseInt(document.getElementById(`${target.ip}-channel-range-${i}`).value)
+                  }
+                };
+                await fetch(`set`, {
+                  method: "POST",
+                  body: JSON.stringify(command)
+                });
+                e.target.disabled = false;
+              });
+              var wifiMonitorToggleLabel = formCheckLabel.cloneNode();
+              wifiMonitorToggleLabel.setAttribute('for',`${target.ip}-monitor-toggle-${i}`);
+              wifiMonitorToggleLabel.textContent=`monitor mode`;
+            wifiMonitorToggleDiv.appendChild(wifiMonitorToggle);
+            wifiMonitorToggleDiv.appendChild(wifiMonitorToggleLabel);
+          wifiMonitorCol.appendChild(wifiMonitorToggleDiv);
+        wifiRow.appendChild(wifiMonitorCol);
+
+          var wifiChannelCol = col.cloneNode();
+            var wifiChannelRangeLabel = formLabel.cloneNode();
+            wifiChannelRangeLabel.setAttribute('for', `${target.ip}-channel-range-${i}`);
+            wifiChannelRangeLabel.textContent='channel';
+            var wifiChannelRange = range.cloneNode();
+            wifiChannelRange.setAttribute('class','form-range w-75');
+            wifiChannelRange.setAttribute('min','1');
+            wifiChannelRange.setAttribute('max','13');
+            wifiChannelRange.setAttribute('step','1');
+            wifiChannelRange.setAttribute('value','1');
+            wifiChannelRange.setAttribute('id',`${target.ip}-channel-range-${i}`);
+            wifiChannelRange.addEventListener('input', async (e) => {
+              document.getElementById(`${target.ip}-channel-${i}`).textContent = e.target.value;
+              var command = {
+                "target" : target.ip,
+                "attribute" : "wlan_channel",
+                "parameters" : {
+                  "interface" : null || selectedInterfaces[target.ip][`socket${i}`],
+                  "channel" : parseInt(e.target.value)
+                }
+              };
+              await fetch(`set`, {
+                method: "POST",
+                body: JSON.stringify(command)
+              });
+            });
+            var wifiChannelIndicator = document.createElement('span');
+            wifiChannelIndicator.setAttribute('id',`${target.ip}-channel-${i}`);
+            wifiChannelIndicator.textContent='-';
+          wifiChannelCol.appendChild(wifiChannelRangeLabel);
+          wifiChannelCol.appendChild(wifiChannelRange);
+          wifiChannelCol.appendChild(wifiChannelIndicator);
+        wifiRow.appendChild(wifiChannelCol);
+      interfaceDiv.appendChild(wifiRow);
+
+        var wifiIntervalRow = row.cloneNode();
+          var wifiIntervalCol = col.cloneNode();
+            var wifiIntervalRangeLabel = formLabel.cloneNode();
+            wifiIntervalRangeLabel.setAttribute('for',`${target.ip}-channel-interval-range-${i}`);
+            wifiIntervalRangeLabel.textContent='interval';
+            var wifiIntervalRange = range.cloneNode();
+            wifiIntervalRange.setAttribute('class','form-range w-50');
+            wifiIntervalRange.setAttribute('min','25');
+            wifiIntervalRange.setAttribute('max','2500');
+            wifiIntervalRange.setAttribute('step','1');
+            wifiIntervalRange.setAttribute('value','1000');
+            wifiIntervalRange.setAttribute('id',`${target.ip}-channel-interval-range-${i}`);
+            wifiIntervalRange.addEventListener('input', async (e) => {
+              document.getElementById(`${target.ip}-channel-interval-${i}`).textContent = e.target.value;
+            });
+            var wifiIntervalIndicator = document.createElement('span');
+            wifiIntervalIndicator.setAttribute('id',`${target.ip}-channel-interval-${i}`);
+            wifiIntervalIndicator.textContent='1000';
+          wifiIntervalCol.appendChild(wifiIntervalRangeLabel);
+          wifiIntervalCol.appendChild(wifiIntervalRange);
+          wifiIntervalCol.appendChild(wifiIntervalIndicator);
+          var wifiIntervalToggleCol = col.cloneNode();
+            var wifiIntervalToggleDiv = formToggleDiv.cloneNode();
+              var wifiIntervalToggle = toggle.cloneNode();
+              wifiIntervalToggle.setAttribute('id',`${target.ip}-channel-interval-toggle-${i}`);
+              wifiIntervalToggle.addEventListener('change', e => {
+                if(e.target.checked){
+                  channelInterval(target.ip);
+                }
+              });
+              var wifiIntervalToggleLabel = formCheckLabel.cloneNode();
+              wifiIntervalToggleLabel.setAttribute('for',`${target.ip}-channel-interval-toggle-${i}`);
+              wifiIntervalToggleLabel.textContent='repeat';
+            wifiIntervalToggleDiv.appendChild(wifiIntervalToggle);
+            wifiIntervalToggleDiv.appendChild(wifiIntervalToggleLabel);
+          wifiIntervalToggleCol.appendChild(wifiIntervalToggleDiv);
+        wifiIntervalRow.appendChild(wifiIntervalCol);
+        wifiIntervalRow.appendChild(wifiIntervalToggleCol);
+      interfaceDiv.appendChild(wifiIntervalRow);
+
+        //----------------------------------------------------------------
+        // Section for setting up Rogue APs
+
+        var rogueAPRow = row.cloneNode();
+          var rogueAPSSIDCol = document.createElement('div');
+          rogueAPSSIDCol.setAttribute('class','col-1');
+            var rogueAPSSIDButton = button.cloneNode();
+            rogueAPSSIDButton.setAttribute('id',`${target.ip}-ssid-button-${i}`);
+            rogueAPSSIDButton.textContent='+';
+            rogueAPSSIDButton.addEventListener('click', async (e) =>{
+              await updateAPSelect(target.ip, i);
+            });
+          rogueAPSSIDCol.appendChild(rogueAPSSIDButton);
+          var rogueAPSelectCol = document.createElement('div');
+          rogueAPSelectCol.setAttribute('class','col-10');
+            var rogueAPSelect = select.cloneNode();
+            rogueAPSelect.setAttribute('id',`${target.ip}-ssid-select-${i}`);
+          rogueAPSelectCol.appendChild(rogueAPSelect);
+          var rogueAPSSIDToggleCol = document.createElement('div');
+          rogueAPSSIDToggleCol.setAttribute('class','col-1');
+            var rogueAPSSIDToggle = toggle.cloneNode();
+            rogueAPSSIDToggle.setAttribute('id',`${target.ip}-ap-toggle-${i}`);
+            rogueAPSSIDToggle.addEventListener('change', async (e) => {
+              var ssid = document.getElementById(`${target.ip}-ssid-select-${i}`).value;
+              document.getElementById(`${target.ip}-monitor-toggle-${i}`).disabled = e.target.checked;
+              document.getElementById(`${target.ip}-channel-range-${i}`).disabled = e.target.checked;
+              var toggle = document.getElementById(`${target.ip}-channel-interval-toggle-${i}`);
+              toggle.checked = false;
+              toggle.disabled = e.target.checked;
+              toggle.dispatchEvent(new Event('change'));
+              var command; 
+              var MAC = null;
+              console.log(apLists);
+              if(apLists[target.ip].aps[ssid]){
+                if(apLists[target.ip].aps[ssid]['mac_address']){
+                  MAC = apLists[target.ip].aps[ssid].MACs[0];
+                }
+              }
+              if(e.target.checked){
+                command = {
+                  "target" : target.ip,
+                  'action' : 'start_ap',
+                  'parameters' : {
+                    'interface': socket ? socket.interface : null,
+                    "ssid": ssid,
+                    "ip_address": `10.10.${i+1}0.1`,
+                    "password": null,
+                    "mac_address": MAC,
+                    'channel' : 5 //or random?
+                  }
+                }
+              } else {
+                command = {
+                  "target" : target.ip,
+                  'action' : 'stop_ap',
+                  'parameters' : {
+                    'interface' : socket ? socket.interface : null,
+                  }
+                }
+              }
+              fetch(`run`, {
+                method: "POST",
+                body: JSON.stringify(command)
+              });
+            });
+          rogueAPSSIDToggleCol.appendChild(rogueAPSSIDToggle)
+          rogueAPRow.appendChild(rogueAPSSIDCol);
+          rogueAPRow.appendChild(rogueAPSelectCol);
+          rogueAPRow.appendChild(rogueAPSSIDToggleCol);
+        interfaceDiv.appendChild(rogueAPRow);
+      interfaceDivs.push(interfaceDiv);
+    }
+    console.log('interfaceDivs',interfaceDivs);
+    return interfaceDivs;
+  }
+
   //================================================================
 
   function createPanel(target){
-
-    //---Bits and pieces---
-    var row = document.createElement('div');
-    row.setAttribute('class', 'row align-items-center justify-content-center text-center');
-
-    var col = document.createElement('div');
-    col.setAttribute('class', 'col text-center');
-
-    var formToggleDiv = document.createElement('div');
-    formToggleDiv.setAttribute('class','d-inline-block form-check form-switch');
-
-    var formCheckDiv = document.createElement('div');
-    formCheckDiv.setAttribute('class','form-check');
-
-    var toggle = document.createElement('input');
-    toggle.setAttribute('class', 'form-check-input m-1');
-    toggle.setAttribute('type', 'checkbox');
-
-    var hr = document.createElement('hr');
-
-    var formCheckLabel = document.createElement('label');
-    formCheckLabel.setAttribute('class','form-check-label m-1');
-
-    var formLabel = document.createElement('label');
-    formLabel.setAttribute('class','form-label m-1');
-
-    var range = document.createElement('input');
-    range.setAttribute('type', 'range');
-    range.setAttribute('class', 'form-range m-1');
-
-    var button = document.createElement('button');
-    button.setAttribute('class', 'btn btn-sm btn-outline-secondary m-1');
-
-    var select = document.createElement('select');
-    select.setAttribute('class','form-select m-1');
 
     //----------------------------------------------------------------
     //Construction
@@ -368,180 +669,7 @@
       // Socket Controls
       // By default, there will be two slots. One for each analog output on the Raspberry Pi
       
-      var wifiRow = row.cloneNode();
-        var wifiMonitorCol = col.cloneNode();
-          var wifiMonitorToggleDiv = formToggleDiv.cloneNode();
-            var wifiMonitorToggle = toggle.cloneNode();
-            wifiMonitorToggle.setAttribute('id',`${target.ip}-monitor-toggle`);
-            wifiMonitorToggle.addEventListener('change', async (e) => {
-              e.target.disabled = true;
-              var command = {
-                "target" : target.ip,
-                "attribute" : "wlan_monitor_mode",
-                "parameters" : {
-                  "interface" : null || target.state.sockets.sockets[socket_index],
-                  "monitor" : e.target.checked,
-                  "channel" : parseInt(document.getElementById(`${target.ip}-channel-range`).value)
-                }
-              };
-              await fetch(`set`, {
-                method: "POST",
-                body: JSON.stringify(command)
-              });
-              e.target.disabled = false;
-            });
-            var wifiMonitorToggleLabel = formCheckLabel.cloneNode();
-            wifiMonitorToggleLabel.setAttribute('for',`${target.ip}-monitor-toggle`);
-            wifiMonitorToggleLabel.textContent=`monitor mode`;
-          wifiMonitorToggleDiv.appendChild(wifiMonitorToggle);
-          wifiMonitorToggleDiv.appendChild(wifiMonitorToggleLabel);
-        wifiMonitorCol.appendChild(wifiMonitorToggleDiv);
-
-        var wifiChannelCol = col.cloneNode();
-          var wifiChannelRangeLabel = formLabel.cloneNode();
-          wifiChannelRangeLabel.setAttribute('for',`${target.ip}-channel-range`);
-          wifiChannelRangeLabel.textContent='channel';
-          var wifiChannelRange = range.cloneNode();
-          wifiChannelRange.setAttribute('class','form-range w-75');
-          wifiChannelRange.setAttribute('min','1');
-          wifiChannelRange.setAttribute('max','13');
-          wifiChannelRange.setAttribute('step','1');
-          wifiChannelRange.setAttribute('value','1');
-          wifiChannelRange.setAttribute('id',`${target.ip}-channel-range`);
-          wifiChannelRange.addEventListener('input', async (e) => {
-            e.target.disabled = true;
-            document.getElementById(`${target.ip}-channel`).textContent = e.target.value;
-            var command = {
-              "target" : target.ip,
-              "attribute" : "wlan_channel",
-              "parameters" : {
-                "interface" : null || target.state.sockets.sockets[socket_index],
-                "channel" : parseInt(e.target.value)
-              }
-            };
-            await fetch(`set`, {
-              method: "POST",
-              body: JSON.stringify(command)
-            });
-            e.target.disabled = false;
-          });
-          var wifiChannelIndicator = document.createElement('span');
-          wifiChannelIndicator.setAttribute('id',`${target.ip}-channel`);
-          wifiChannelIndicator.textContent='-';
-        wifiChannelCol.appendChild(wifiChannelRangeLabel);
-        wifiChannelCol.appendChild(wifiChannelRange);
-        wifiChannelCol.appendChild(wifiChannelIndicator);
-      wifiRow.appendChild(wifiMonitorCol);
-      wifiRow.appendChild(wifiChannelCol);
-
-      var wifiIntervalRow = row.cloneNode();
-        var wifiIntervalCol = col.cloneNode();
-          var wifiIntervalRangeLabel = formLabel.cloneNode();
-          wifiIntervalRangeLabel.setAttribute('for',`${target.ip}-channel-interval-range`);
-          wifiIntervalRangeLabel.textContent='interval';
-          var wifiIntervalRange = range.cloneNode();
-          wifiIntervalRange.setAttribute('class','form-range w-50');
-          wifiIntervalRange.setAttribute('min','25');
-          wifiIntervalRange.setAttribute('max','2500');
-          wifiIntervalRange.setAttribute('step','1');
-          wifiIntervalRange.setAttribute('value','1000');
-          wifiIntervalRange.setAttribute('id',`${target.ip}-channel-interval-range`);
-          wifiIntervalRange.addEventListener('input', async (e) => {
-            document.getElementById(`${target.ip}-channel-interval`).textContent = e.target.value;
-          });
-          var wifiIntervalIndicator = document.createElement('span');
-          wifiIntervalIndicator.setAttribute('id',`${target.ip}-channel-interval`);
-          wifiIntervalIndicator.textContent='1000';
-        wifiIntervalCol.appendChild(wifiIntervalRangeLabel);
-        wifiIntervalCol.appendChild(wifiIntervalRange);
-        wifiIntervalCol.appendChild(wifiIntervalIndicator);
-        var wifiIntervalToggleCol = col.cloneNode();
-          var wifiIntervalToggleDiv = formToggleDiv.cloneNode();
-            var wifiIntervalToggle = toggle.cloneNode();
-            wifiIntervalToggle.setAttribute('id',`${target.ip}-channel-interval-toggle`);
-            wifiIntervalToggle.addEventListener('change', e => {
-              if(e.target.checked){
-                channelInterval(id);
-              }
-            });
-            var wifiIntervalToggleLabel = formCheckLabel.cloneNode();
-            wifiIntervalToggleLabel.setAttribute('for',`${target.ip}-channel-interval-toggle`);
-            wifiIntervalToggleLabel.textContent='repeat';
-          wifiIntervalToggleDiv.appendChild(wifiIntervalToggle);
-          wifiIntervalToggleDiv.appendChild(wifiIntervalToggleLabel);
-        wifiIntervalToggleCol.appendChild(wifiIntervalToggleDiv);
-      wifiIntervalRow.appendChild(wifiIntervalCol);
-      wifiIntervalRow.appendChild(wifiIntervalToggleCol);
-
-      //----------------------------------------------------------------
-      // Section for setting up Rogue APs
-
-      var rogueAPRow = row.cloneNode();
-        var rogueAPSSIDCol = document.createElement('div');
-        rogueAPSSIDCol.setAttribute('class','col-1');
-          var rogueAPSSIDButton = button.cloneNode();
-          rogueAPSSIDButton.setAttribute('id',`${target.ip}-ssid-button`);
-          rogueAPSSIDButton.textContent='+';
-          rogueAPSSIDButton.addEventListener('click', async (e) =>{
-            await updateAPSelect(target.ip);
-          });
-        rogueAPSSIDCol.appendChild(rogueAPSSIDButton);
-        var rogueAPSelectCol = document.createElement('div');
-        rogueAPSelectCol.setAttribute('class','col-10');
-          var rogueAPSelect = select.cloneNode();
-          rogueAPSelect.setAttribute('id',`${target.ip}-ssid-select`);
-        rogueAPSelectCol.appendChild(rogueAPSelect);
-        var rogueAPSSIDToggleCol = document.createElement('div');
-        rogueAPSSIDToggleCol.setAttribute('class','col-1');
-          var rogueAPSSIDToggle = toggle.cloneNode();
-          rogueAPSSIDToggle.setAttribute('id',`${target.ip}-ap-toggle`);
-          rogueAPSSIDToggle.addEventListener('change', async (e) => {
-            var ssid = document.getElementById(`${target.ip}-ssid-select`).value;
-            document.getElementById(`${target.ip}-monitor-toggle`).disabled = e.target.checked;
-            document.getElementById(`${target.ip}-channel-range`).disabled = e.target.checked;
-            var toggle = document.getElementById(`${target.ip}-channel-interval-toggle`);
-            toggle.checked = false;
-            toggle.disabled = e.target.checked;
-            toggle.dispatchEvent(new Event('change'));
-            var command; 
-            var MAC = null;
-            console.log(apLists);
-            if(apLists[id].aps[ssid]){
-              if(apLists[id].aps[ssid]['MACs']){
-                MAC = apLists[id].aps[ssid].MACs[0];
-              }
-            }
-            if(e.target.checked){
-              command = {
-                "target" : target.ip,
-                'action' : 'start_ap',
-                'parameters' : {
-                  'interface': target.state.sockets.sockets[socket_index].interface_name,
-                  "ssid": ssid,
-                  "ip_address": `10.10.${socket_index+1}0.1`,
-                  "password": null,
-                  "mac_address": MAC,
-                  'channel' : 5 //or random?
-                }
-              }
-            } else {
-              command = {
-                "target" : target.ip,
-                'action' : 'stop_ap',
-                'parameters' : {
-                  'interface' : target.state.sockets.sockets[socket_index].interface_name
-                }
-              }
-            }
-            fetch(`run`, {
-              method: "POST",
-              body: JSON.stringify(command)
-            });
-          });
-        rogueAPSSIDToggleCol.appendChild(rogueAPSSIDToggle)
-      rogueAPRow.appendChild(rogueAPSSIDCol);
-      rogueAPRow.appendChild(rogueAPSelectCol);
-      rogueAPRow.appendChild(rogueAPSSIDToggleCol);
+      var interfaceDivs = createWifiRows(target);
 
       //----------------------------------------------------------------
       // Pings and Scans
@@ -1024,13 +1152,11 @@
 
     panel.appendChild(title);
     panel.appendChild(writerDiv);
-    // panel.appendChild(textRow);
-    // panel.appendChild(colorShiftRow);
-    // panel.appendChild(colorShiftIntervalRow);
+
     panel.appendChild(hr.cloneNode());
-    panel.appendChild(wifiRow);
-    panel.appendChild(wifiIntervalRow);
-    panel.appendChild(rogueAPRow);
+    interfaceDivs.forEach(interfaceDiv => panel.appendChild(interfaceDiv));
+    // panel.appendChild(wifiIntervalRow);
+    // panel.appendChild(rogueAPRow);
     panel.appendChild(hr.cloneNode());
     panel.appendChild(messageRow);
     panel.appendChild(sendRow);
@@ -1158,6 +1284,11 @@
 
             let panel = null;
             for(var i = 0; i < targetList.length; i++){
+              //initialize selected interfaces
+              selectedInterfaces[targetList[i].ip] = {
+                'socket1' : '',
+                'socket2' : ''
+              }
               panel = createPanel(targetList[i]);
               parent.appendChild(panel);
               await updateStatus(targetList[i].ip);
