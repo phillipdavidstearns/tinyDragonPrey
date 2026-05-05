@@ -5,7 +5,7 @@ import sys
 from random import random
 import requests
 import subprocess
-from math import pi, sin, pow
+from math import pi, sin, pow, ceil
 from decouple import config
 from netifaces import AF_INET, ifaddresses
 import socket
@@ -13,6 +13,7 @@ import asyncio
 from threading import Thread
 from queue import Queue
 import logging
+import configparser
 
 from signal import *
 
@@ -87,7 +88,8 @@ def generateWaveform(frequency=1000, amplitude=1.0, duration=1400, shape="sine",
         waveform.append(sample[i % len(sample)])
       return waveform
 
-async def sendTone(parameters):
+@async_wrapper
+def sendTone(parameters):
   try:
     frequency = float(parameters['frequency'])
     amplitude = float(parameters['amplitude'])
@@ -99,17 +101,18 @@ async def sendTone(parameters):
       duration=duration,
       shape=shape
     )
-    await nping_icmp_oneshot_bytes(parameters)
+    nping_icmp_oneshot_bytes(parameters)
   except Exception as e:
     logging.error('sendTone():',e)
 
-@async_wrapper
+
 def nping_icmp_oneshot_bytes(parameters):
   try:
     target = parameters['target']
     message = parameters['message']
+
     subprocess.run(
-      ["sudo", "nping", "--icmp", target, "-c", "1", "--data", message.hex()],
+      ["sudo", "nping", "--icmp", target, "--icmp-type", "er", "-c", "5" ,"--delay","0","--data", message.hex()],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
@@ -330,7 +333,7 @@ class RunHandler(RequestHandler):
 
       match request['command']:
         case 'nping_icmp_oneshot':
-          await nping_icmp_oneshot(request['parameters'])
+          IOLoop.current().add_callback(lambda: nping_icmp_oneshot(request['parameters']))
         case 'nping_icmp_flood':
           await nping_icmp_flood(request['parameters'])
         case 'tone':
@@ -383,7 +386,22 @@ class NetworkScanHandler(RequestHandler):
 
 class AccessPointHandler(RequestHandler):
   async def get(self):
-    aps = {}
+    aps = {
+      'aps' : {}
+    }
+
+    for ap in accesspoint_presets:
+      aps['aps'].update({
+        ap['ssid']: {
+          'mac_addresses': [ap['mac_address']] if 'mac_address' in ap else None,
+          'password': ap['password'] if 'password' in ap else None,
+          'channel': ap['channel'] if 'channel' in ap else None,
+          'ip_address': ap['ip_address'] if 'ip_address' in ap else None,
+          'count': 0,
+          'type': -1
+        }
+      })
+
     try:
       if not (target := self.get_query_argument('target', None)):
         self.set_status(400)
@@ -398,7 +416,16 @@ class AccessPointHandler(RequestHandler):
         )
       )
 
-      aps['aps'] = response.json()
+      sniffed_aps = response.json()
+      for key in sniffed_aps.keys():
+        sniffed_aps[key].update({
+          'password': None,
+          'channel': None,
+          'ip_address': None
+        })
+
+      aps['aps'].update(sniffed_aps);
+
       aps['online'] = True
 
     except:
@@ -424,7 +451,7 @@ def start_ap(parameters):
   try:
     requests.post(
       url=f"http://{parameters['target']}",
-      data=json.dumps({"action": "start_ap", "parameters" : parameters})
+      data=json.dumps({"attribute": "start_ap", "parameters" : parameters})
     )
   except Exception as e:
     logging.error(f"While setting up rogue AP on {parameters['target']}: {repr(e)}")
@@ -434,10 +461,22 @@ def stop_ap(parameters):
   try:
     requests.post(
       url=f"http://{parameters['target']}",
-      data=json.dumps({ "action": "stop_ap"})
+      data=json.dumps({ "attribute": "stop_ap", "parameters" : parameters})
     )
   except Exception as e:
     logging.error(f"While stopping rogue AP on {parameters['target']}: {repr(e)}")
+
+
+#===========================================================================
+
+def loadAPs():
+  parser = configparser.ConfigParser()
+  parser.read('access_points.conf')
+
+  return [
+    {key: value for key, value in parser.items(section)}
+    for section in parser.sections()
+  ]
 
 #===========================================================================
 # Executed when run as stand alone
@@ -482,6 +521,7 @@ if __name__ == "__main__":
   signal(SIGHUP, signalHandler)
 
   try:
+    accesspoint_presets = loadAPs()
     application = make_app()
     http_server = HTTPServer(application)
     http_server.listen(1337)

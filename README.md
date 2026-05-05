@@ -50,18 +50,22 @@ Part of developing tinyDragonPrey, was to create a more performance friendly int
 
 **On the tinyDragon:**
 
-* enabling/disabling wifi interface monitor mode
-* setting wifi interface channel
-* enabling/disabling printing packets to the console
-* enabling/disabling colorizing the background of printed characters based on the byte value represented
-* setting an offset value for that background color
-* deploying rogue access points using
+* on-the-fly setting and changing of socket objects to listen to different interfaces
+* get available network interfaces
+* get the current state of the dragon, including writer and socket settings
+* get the current state of network interfaces
+* enable/disable wifi interface monitor mode
+* set wifi interface channel
+* enable/disable printing packets to the console
+* enable/disable colorizing the background of printed characters based on the byte value represented
+* set an offset value for that background color
+* deploy rogue access points using
 	* SSIDs sniffed from probe requests while in monitor mode
-	* APs loaded from a JSON file (in progress)
+	* APs loaded from a config file (in progress)
 
 **On the Controller machine:**
 
-* one-shot and flood ICMP pings with `nping` and custom message or waveform payloads
+* one-shot and flood ICMP pings with `nping` and custom message or waveform payloads (As of 2026, this feature seems throttled...)
 * launch several different flavors of `nmap` scans
 
 Any other vulnerability scanning and exploitation will happen from the command line via metasploit, etc.
@@ -72,14 +76,14 @@ Any other vulnerability scanning and exploitation will happen from the command l
 
 ## Resources:
 
-[Setup a Raspberry Pi to run a Web Browser in Kiosk Mode](https://die-antwort.eu/techblog/2017-12-setup-raspberry-pi-for-kiosk-mode/)(if console output is necessary)
+[Setup a Raspberry Pi to run a Web Browser in Kiosk Mode](https://die-antwort.eu/techblog/2017-12-setup-raspberry-pi-for-kiosk-mode/)(if console output is necessary, otherwise you just need some `systemd` chops)
 
 
 ## You'll Need:
 
-1. Raspberry Pi (tested on: 3B+, Zero W, 4B+) and power supply
-1. Monitor with HDMI connection and HDMI cable
-1. A way to connect the Raspberry Pi to the internet (ethernet cable or wifi) via your local network
+1. Raspberry Pi (tested on: 3B+, Zero W, 4B+) and power supply capable of feeding multiple usb adapters in addition to the Pi itself.
+1. Monitor with HDMI connection and HDMI cable (if dealing with text output, otherwise skip)
+1. A way to connect the Raspberry Pi to the internet (ethernet cable or wifi) via your local network.
 
 ## Process:
 
@@ -100,7 +104,9 @@ With Raspi OS Bullseye, everything changed regarding setup...
 	1. configure locale settings
 1. Flash, insert card, boot.
   
-### Configuring users
+### Configuring users (Optional but Highly Recommended for Kiosk Mode)
+
+As of 2026, Raspberry Pi has disabled passwordless `sudo` so some of this might not even work as expected:
 
 We need to setup a general user for the device to boot into and auto login. If the kiosk is escaped or crashes to the command line, we want this user to be able to restart the application or reboot, but not much else. We also want to setup an admin user, "admin" that will have the ability to use `sudo`, but not `sudo su`.
 
@@ -165,9 +171,9 @@ admin   ALL = (ALL) NOPASSWD: ALL, !/bin/su
 
 The kiosk will run on Openbox, which uses xServer. Chromium browser will be served in the window and access the Theories of Everything hosted on a local server built on the Tornado Web Framework for Python.
 
-`sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install -y git python3-dev`
+`sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install -y git`
 
-### Disable the splash and console text:
+### Disable the splash and console text (Optional):
 
 1. `sudo nano /boot/config.txt`
 1. Enable HDMI hot plug.
@@ -177,7 +183,7 @@ The kiosk will run on Openbox, which uses xServer. Chromium browser will be serv
 
 [source](https://ampron.eu/article/tutorial-simplest-way-to-remove-boot-text-on-the-raspberry-pi-based-kiosk-or-digital-signage-display/)
 
-### Customize MOTD:
+### Customize MOTD (Optional):
 
 1. disable scripts to generate messages: `sudo chmod -x /etc/update-motd.d/*`
 1. create a backup: `sudo cp /etc/motd /etc/motd.bak`
@@ -251,6 +257,8 @@ sudo tinyDragonPrey
 
 ## Setting up python
 
+`sudo apt-get update && sudo apt-get upgrade -y && sudo apt-get install -y python3-dev port-audio19`
+
 1. `git clone <rpi-dragon-repo>`
 1. `git clone <tiny-dragon-prey-repo>`
 1. `python3 -m venv venv`
@@ -298,6 +306,8 @@ Helpful Forum Thread: [https://forums.raspberrypi.com/viewtopic.php?t=357998](ht
 
 Docs: [https://www.networkmanager.dev/docs/api/latest/](https://www.networkmanager.dev/docs/api/latest/)
 
+Creating a Wireless Access Point and Sharing Internet Using nmcli: [https://www.baeldung.com/linux/nmcli-wap-sharing-internet](https://www.baeldung.com/linux/nmcli-wap-sharing-internet)
+
 1. Install dsnmasq: `sudo apt update && sudo apt install dnsmasq -y`
 1. Stop it: `sudo systemctl stop dsnmasq`
 1. Disable it: `sudo systemctl disable dsnmasq`
@@ -317,36 +327,33 @@ Most documentation hints that configuration should take place via `nmcli`, but i
 [connection]
 id={{interface}}
 type=wifi
-interface-name={{interface}}
 autoconnect=false
+interface-name={{interface}}
 
 [wifi]
 band=bg
 channel={{channel}}
 mode=ap
-powersave=2
 ssid={{ssid}}
 
-[wifi-security]
-{% if password %}
-  key-mgmt=wpa-psk
-  pairwise=ccmp
-  group=ccmp
-  proto=rsn
-  psk={password}
-{% else %}
-  key-mgmt=none
-  auth-alg=none
+{% if password %}[wifi-security]
+key-mgmt=wpa-psk
+psk={{password}}
+pairwise=ccmp;
+group=ccmp;
+proto=rsn;
 {% endif %}
 
 [ipv4]
-address1={ip_address}/24
-gateway={ip_address}
+address1={{ip_address}}/24
+gateway={{ip_address}}
 method=shared
 
 [ipv6]
 addr-gen-mode=default
-method=disabled
+method=ignore
+
+[proxy]
 
 ```
 

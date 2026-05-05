@@ -12,14 +12,6 @@
     initControlPanel();
   }, false);
 
-  var networkSSIDs = [
-    'UAP',
-    'Public WiFi',
-    '_Free Public WiFi_',
-    'DEN Airport Free WiFi',
-    'DEN Airport Free WiFi 2.4',
-  ]
-
   //----------------------------------------------------------------
   // HTML node menu
 
@@ -36,13 +28,13 @@
   formCheckDiv.setAttribute('class','form-check');
 
   const toggle = document.createElement('input');
-  toggle.setAttribute('class', 'form-check-input m-1');
+  toggle.setAttribute('class', 'form-check-input');
   toggle.setAttribute('type', 'checkbox');
 
   const hr = document.createElement('hr');
 
   const formCheckLabel = document.createElement('label');
-  formCheckLabel.setAttribute('class','form-check-label m-1');
+  formCheckLabel.setAttribute('class','form-check-label');
 
   const formLabel = document.createElement('label');
   formLabel.setAttribute('class','form-label m-1');
@@ -93,40 +85,40 @@
 
   //----------------------------------------------------------------
 
-  async function updateAPSelect(target_ip, index){
+  async function updateAPSelect(target_ip){
     await fetch(
       `access-point?target=${target_ip}`,
       {method: 'GET'}
     )
     .then(async (response) => await response.json())
     .then((ap_list) => {
-      let select = document.getElementById(`${target_ip}-ssid-select-${index}`);
-      removeOptions(select);
-      let option;
 
-      // if (!ap_list.online){
-      //   option = document.createElement('option');
-      //   option.textContent = 'unreachable';
-      //   select.appendChild(option);
-      //   select.disabled = true; 
-      //   return
-      // }
+      const index = targetList.findIndex(item => item.ip === target_ip);
+      const state = targetList[index].state;
 
-      apLists[target_ip] = ap_list;
-      for(let k = 0 ; k < networkSSIDs.length; k++){
-        option = document.createElement('option');
-        option.setAttribute('value', networkSSIDs[k]);
-        option.textContent = networkSSIDs[k];
-        select.appendChild(option);
-      }
-      let keys = Object.keys(ap_list.aps);
-      for(let j = 0 ; j < keys.length; j++){
-        option = document.createElement('option');
+      for(let i = 0; i < state.audio_channels; i++){
+        const select = document.getElementById(`${target_ip}-ssid-select-${i}`);
+        removeOptions(select);
+
+        if (!ap_list.online){
+          let option = document.createElement('option');
+          option.textContent = 'unreachable';
+          select.appendChild(option);
+          select.disabled = true; 
+          return
+        }
+
+        apLists[target_ip] = ap_list;
+
+        const keys = Object.keys(ap_list.aps);
+        for(let j = 0 ; j < keys.length; j++){
+          let option = document.createElement('option');
           option.setAttribute('value',keys[j]);
           option.textContent = `${keys[j]} - ${ap_list.aps[keys[j]].count}`;
           select.appendChild(option);
+        }
+        select.selectedIndex = 0;
       }
-      select.selectedIndex = 0;
 
     })
     .catch((error) => console.error(error));
@@ -134,10 +126,16 @@
 
   //----------------------------------------------------------------
 
-  async function updateStatus(ip, index){
+  async function updateStatus(ip){
 
-    await updateInterfaceSection(ip, 0);
-    await updateInterfaceSection(ip, 1);
+    console.log('updateStatus - targetList', targetList);
+
+    const index = targetList.findIndex(item => item.ip === ip);
+    console.log(`index of ${ip} in targetList = ${index}`);
+
+    for(let i = 0; i < targetList[index].state.audio_channels; i++){
+      await updateInterfaceSection(ip, i);
+    }
 
     await fetch(`get?resource=state&target=${ip}`, {method: 'GET'})
     .then(async (response) => await response.json())
@@ -218,7 +216,6 @@
     const channelIndicator = document.getElementById(`${ip}-channel-${index}`);
     const rogueAPToggle = document.getElementById(`${ip}-ap-toggle-${index}`);
     const rogueAPSelect = document.getElementById(`${ip}-ssid-select-${index}`);
-    const rogueAPButton = document.getElementById(`${ip}-ssid-button-${index}`);
 
     if (socket_state.wifi_info === null){
       monitorModeToggle.disabled = true;
@@ -228,19 +225,51 @@
       channelIndicator.textContent='-';
       rogueAPToggle.disabled = true;
       rogueAPSelect.disabled = true;
-      rogueAPButton.disabled = true;
     } else {
-      monitorModeToggle.disabled = ! new Set(socket_state.wifi_info.modes).has('monitor');
+      let is_monitor_capable = new Set(socket_state.wifi_info.modes).has('monitor')
+      monitorModeToggle.disabled = ! is_monitor_capable;
       monitorModeToggle.checked = socket_state.wifi_info.current_mode === "monitor";
-      channelRange.disabled = false;
-      channelRange.value = socket_state.wifi_info.current_channel;
-      channelIndicator.textContent=socket_state.wifi_info.current_channel;
+      channelRange.disabled =  ! is_monitor_capable;
+      channelRange.value = parseInt(socket_state.wifi_info.current_channel);
+      channelIndicator.textContent = socket_state.wifi_info.current_channel;
       channelIntervalRange.disabled = false;
       channelIntervalToggle.disabled = false;
-      rogueAPToggle.disabled = false;
-      rogueAPSelect.disabled = false;
-      rogueAPButton.disabled = false;
+      rogueAPToggle.disabled = ! new Set(socket_state.wifi_info.modes).has('AP');
+      rogueAPToggle.checked = socket_state.wifi_info.current_mode === "master";
+      rogueAPSelect.disabled = socket_state.wifi_info.current_mode === "master";
     }
+  }
+
+  //----------------------------------------------------------------
+
+  function rangeGenerator(name, params, id, event_type, callback, index){
+    var rangeRow = row.cloneNode();
+      var rangeLabelCol = col.cloneNode();
+        var rangeLabel = formLabel.cloneNode();
+        rangeLabel.setAttribute('for', `${id}-${name}-range-${ index || 'main'}`);
+        rangeLabel.textContent = name;
+      rangeLabelCol.appendChild(rangeLabel);
+    rangeRow.appendChild(rangeLabelCol);
+
+      var rangeCol = col.cloneNode();
+        var rangeGUI = range.cloneNode();
+        rangeGUI.setAttribute('class','form-range w-75');
+        rangeGUI.setAttribute('min', params.min);
+        rangeGUI.setAttribute('max', params.max);
+        rangeGUI.setAttribute('step', params.step);
+        rangeGUI.setAttribute('value', params.value);
+        rangeGUI.setAttribute('id',`${id}-${name}-range-${ index || 'main'}`);
+        rangeGUI.addEventListener(event_type, callback);
+      rangeCol.appendChild(rangeGUI);
+    rangeRow.appendChild(rangeCol);
+
+      var indicatorCol = col.cloneNode();
+        var indicator = document.createElement('span');
+          indicator.setAttribute('id',`${id}-${name}-${index}`);
+          indicator.textContent='';
+      indicatorCol.appendChild(indicator);
+    rangeRow.appendChild(indicatorCol);
+    return rangeRow;
   }
 
   //----------------------------------------------------------------
@@ -276,9 +305,6 @@
 
             interfaceSelect.addEventListener('change', async (e) => {
               if (! e.target.value) return;
-              // const state = await getInterfaceState(target.ip, e.target.value);
-              // console.log(`state of ${target.ip}'s ${e.target.value} interface:`, state);
-
               var command = {
                 "target" : target.ip,
                 "attribute" : "socket_interface",
@@ -329,37 +355,34 @@
         wifiRow.appendChild(wifiMonitorCol);
 
           var wifiChannelCol = col.cloneNode();
-            var wifiChannelRangeLabel = formLabel.cloneNode();
-            wifiChannelRangeLabel.setAttribute('for', `${target.ip}-channel-range-${i}`);
-            wifiChannelRangeLabel.textContent='channel';
-            var wifiChannelRange = range.cloneNode();
-            wifiChannelRange.setAttribute('class','form-range w-75');
-            wifiChannelRange.setAttribute('min','1');
-            wifiChannelRange.setAttribute('max','13');
-            wifiChannelRange.setAttribute('step','1');
-            wifiChannelRange.setAttribute('value','1');
-            wifiChannelRange.setAttribute('id',`${target.ip}-channel-range-${i}`);
-            wifiChannelRange.addEventListener('input', async (e) => {
-              document.getElementById(`${target.ip}-channel-${i}`).textContent = e.target.value;
-              var command = {
-                "target" : target.ip,
-                "attribute" : "wlan_channel",
-                "parameters" : {
-                  "interface" : null || selectedInterfaces[target.ip][`socket${i}`],
-                  "channel" : parseInt(e.target.value)
-                }
-              };
-              await fetch(`set`, {
-                method: "POST",
-                body: JSON.stringify(command)
-              });
-            });
-            var wifiChannelIndicator = document.createElement('span');
-            wifiChannelIndicator.setAttribute('id',`${target.ip}-channel-${i}`);
-            wifiChannelIndicator.textContent='-';
-          wifiChannelCol.appendChild(wifiChannelRangeLabel);
+            var wifiChannelRange = rangeGenerator(
+              "channel",
+              {
+                'min':'1',
+                'max': '14',
+                'step': '1',
+                'value': '1'
+              },
+              target.ip,
+              'input',
+              async (e) => {
+                document.getElementById(`${target.ip}-channel-${i}`).textContent = e.target.value;
+                var command = {
+                  "target" : target.ip,
+                  "attribute" : "wlan_channel",
+                  "parameters" : {
+                    "interface" : null || selectedInterfaces[target.ip][`socket${i}`],
+                    "channel" : parseInt(e.target.value)
+                  }
+                };
+                await fetch(`set`, {
+                  method: "POST",
+                  body: JSON.stringify(command)
+                });
+              },
+              i.toString()
+            );
           wifiChannelCol.appendChild(wifiChannelRange);
-          wifiChannelCol.appendChild(wifiChannelIndicator);
         wifiRow.appendChild(wifiChannelCol);
       interfaceDiv.appendChild(wifiRow);
 
@@ -390,7 +413,7 @@
               wifiIntervalToggle.setAttribute('id',`${target.ip}-channel-interval-toggle-${i}`);
               wifiIntervalToggle.addEventListener('change', e => {
                 if(e.target.checked){
-                  channelInterval(target.ip);
+                  channelInterval(target.ip, i);
                 }
               });
               var wifiIntervalToggleLabel = formCheckLabel.cloneNode();
@@ -410,10 +433,10 @@
           var rogueAPSSIDCol = document.createElement('div');
           rogueAPSSIDCol.setAttribute('class','col-1');
             var rogueAPSSIDButton = button.cloneNode();
-            rogueAPSSIDButton.setAttribute('id',`${target.ip}-ssid-button-${i}`);
+            rogueAPSSIDButton.setAttribute('id',`${target.ip}-ssid-button`);
             rogueAPSSIDButton.textContent='+';
             rogueAPSSIDButton.addEventListener('click', async (e) =>{
-              await updateAPSelect(target.ip, i);
+              await updateAPSelect(target.ip);
             });
           rogueAPSSIDCol.appendChild(rogueAPSSIDButton);
           var rogueAPSelectCol = document.createElement('div');
@@ -429,37 +452,41 @@
               var ssid = document.getElementById(`${target.ip}-ssid-select-${i}`).value;
               document.getElementById(`${target.ip}-monitor-toggle-${i}`).disabled = e.target.checked;
               document.getElementById(`${target.ip}-channel-range-${i}`).disabled = e.target.checked;
-              var toggle = document.getElementById(`${target.ip}-channel-interval-toggle-${i}`);
-              toggle.checked = false;
-              toggle.disabled = e.target.checked;
-              toggle.dispatchEvent(new Event('change'));
-              var command; 
-              var MAC = null;
-              console.log(apLists);
-              if(apLists[target.ip].aps[ssid]){
-                if(apLists[target.ip].aps[ssid]['mac_address']){
-                  MAC = apLists[target.ip].aps[ssid].MACs[0];
-                }
-              }
+              document.getElementById(`${target.ip}-ssid-select-${i}`).disabled = e.target.checked;
+              var intervalToggle = document.getElementById(`${target.ip}-channel-interval-toggle-${i}`);
+              document.getElementById(`${target.ip}-channel-interval-range-${i}`).disabled = e.target.checked;
+              intervalToggle.checked = false;
+              intervalToggle.disabled = e.target.checked;
+              intervalToggle.dispatchEvent(new Event('change'));
+
+              const ap = apLists[target.ip].aps[ssid];
+
+              var command = null; 
+              var mac_address = 'mac_addresses' in ap && ap['mac_addresses'] ? ap['mac_addresses'][0] : null;
+              var password = 'password' in ap ? ap['password'] : null;
+              var ip_address = 'ip_address' in ap ? ap['ip_address'] : null;
+
               if(e.target.checked){
                 command = {
-                  "target" : target.ip,
-                  'action' : 'start_ap',
+                  'command' : 'start_ap',
                   'parameters' : {
-                    'interface': socket ? socket.interface : null,
+                    "target" : target.ip,
+                    'interface': null || selectedInterfaces[target.ip][`socket${i}`],
                     "ssid": ssid,
-                    "ip_address": `10.10.${i+1}0.1`,
-                    "password": null,
-                    "mac_address": MAC,
-                    'channel' : 5 //or random?
+                    "ip_address": ip_address || `10.10.${i+1}0.1`,
+                    "password": password,
+                    "mac_address": mac_address,
+                    'channel' : parseInt(document.getElementById(`${target.ip}-channel-range-${i}`).value)
                   }
                 }
               } else {
                 command = {
-                  "target" : target.ip,
-                  'action' : 'stop_ap',
+                  'command' : 'stop_ap',
                   'parameters' : {
-                    'interface' : socket ? socket.interface : null,
+                    "target" : target.ip,
+                    'interface' : null || selectedInterfaces[target.ip][`socket${i}`],
+                    'monitor' : document.getElementById(`${target.ip}-monitor-toggle-${i}`).checked,
+                    'channel' : parseInt(document.getElementById(`${target.ip}-channel-range-${i}`).value)
                   }
                 }
               }
@@ -475,7 +502,6 @@
         interfaceDiv.appendChild(rogueAPRow);
       interfaceDivs.push(interfaceDiv);
     }
-    console.log('interfaceDivs',interfaceDivs);
     return interfaceDivs;
   }
 
@@ -798,8 +824,7 @@
           var floodSendButton = button.cloneNode();
           floodSendButton.setAttribute('id',`${target.ip}-message-flood-button`);
           floodSendButton.textContent='flood';
-          floodSendButton.addEventListener('click', async (e) => {
-            e.target.disabled = true;
+          floodSendButton.addEventListener('click', e => {
             var message = document.getElementById(`${target.ip}-message-content`).value;
             var delay = document.getElementById(`${target.ip}-message-flood-delay-range`).value;
             var count = document.getElementById(`${target.ip}-message-flood-count-range`).value;
@@ -812,11 +837,10 @@
                 "count" : count
               }
             };
-            await fetch('run', {
+            fetch('run', {
               method: "POST",
               body: JSON.stringify(command)
             });
-            e.target.disabled=false;
           });
         floodSendCol.appendChild(floodSendButton);
       floodSendRow.appendChild(floodSendCol);
@@ -1016,8 +1040,7 @@
           var beepButton = button.cloneNode();
           beepButton.setAttribute('id',`${target.ip}-tone-button`);
           beepButton.textContent='beep';
-          beepButton.addEventListener('click', async (e) => {
-            e.target.disabled = true;
+          beepButton.addEventListener('click', e => {
             var frequency = document.getElementById(`${target.ip}-frequency-range`).value;
             var duration = document.getElementById(`${target.ip}-duration-range`).value;
             var shape = document.getElementById(`${target.ip}-shape-select`).value;
@@ -1031,11 +1054,10 @@
                 "shape": shape
               }
             };
-            await fetch('run', {
+            fetch('run', {
               method: "POST",
               body: JSON.stringify(command)
             });
-            e.target.disabled = false;
           });
         beepCol.appendChild(beepButton);
       beepRow.appendChild(beepCol);
@@ -1107,8 +1129,7 @@
           var scanButton = button.cloneNode();
           scanButton.setAttribute('id',`${target.ip}-scan-button`);
           scanButton.textContent='scan';
-          scanButton.addEventListener('click', async (e) => {
-            e.target.disabled = true;
+          scanButton.addEventListener('click', e => {
             var args = [];
             args.push(document.getElementById(`${target.ip}-scan-mode-select`).value);
             if (document.getElementById(`${target.ip}-scan-option-sc`).checked){
@@ -1133,11 +1154,10 @@
                 "args": args
               }
             };
-            await fetch('run', {
+            fetch('run', {
               method: "POST",
               body: JSON.stringify(command)
             });
-            e.target.disabled = false;
           });
         scanButtonCol.appendChild(scanButton);
       scanRow.appendChild(scanModeCol);
@@ -1148,15 +1168,10 @@
       scanRow.appendChild(scanOptionOCol);
       scanRow.appendChild(scanButtonCol);
 
-      
-
     panel.appendChild(title);
     panel.appendChild(writerDiv);
-
     panel.appendChild(hr.cloneNode());
     interfaceDivs.forEach(interfaceDiv => panel.appendChild(interfaceDiv));
-    // panel.appendChild(wifiIntervalRow);
-    // panel.appendChild(rogueAPRow);
     panel.appendChild(hr.cloneNode());
     panel.appendChild(messageRow);
     panel.appendChild(sendRow);
@@ -1189,13 +1204,13 @@
 
   //----------------------------------------------------------------
 
-  function channelInterval(id){
-    if(document.getElementById(`${id}-channel-interval-toggle`).checked){
-      var interval = Math.round(document.getElementById(`${id}-channel-interval-range`).value);
-      var range = document.getElementById(`${id}-channel-range`);
+  function channelInterval(id, index){
+    if(document.getElementById(`${id}-channel-interval-toggle-${index}`).checked){
+      var interval = Math.round(document.getElementById(`${id}-channel-interval-range-${index}`).value);
+      var range = document.getElementById(`${id}-channel-range-${index}`);
       range.value = Math.round(13*Math.random());
       range.dispatchEvent(new Event('input'));
-      setTimeout(channelInterval, interval, id);
+      setTimeout(channelInterval, interval, id, index);
     }
   }
 
@@ -1265,12 +1280,14 @@
     document
       .getElementById(`targets-button`)
       .addEventListener('click', async (e) => {
-        targetList = null;
-        e.target.textContent = 'working';
-        e.target.disabled = true;
-        const network = document.getElementById('networks-select').value;
+        try{
+          targetList = null;
+          e.target.textContent = 'working';
+          e.target.disabled = true;
+          const network = document.getElementById('networks-select').value;
 
-        if(network){
+          if(!network) return;
+          
           var parent = document.getElementById('target-panels');
           targetList = await networkScan(network);
           
@@ -1292,13 +1309,17 @@
               panel = createPanel(targetList[i]);
               parent.appendChild(panel);
               await updateStatus(targetList[i].ip);
+              await updateAPSelect(targetList[i].ip);
             }
             parent.hidden = false;
           }
+          
+        } catch (error) {
+          console.error(error);
+        } finally {
+          e.target.textContent = 'targets';
+          e.target.disabled = false;
         }
-
-        e.target.textContent = 'targets';
-        e.target.disabled = false;
     });
 
   //----------------------------------------------------------------
@@ -1438,9 +1459,9 @@
       if(targetList){
         for(var i = 0; i < targetList.length; i++){
           var command = {
-            "target" : targetList[i].ip,
             "command" : "nping_icmp_oneshot",
             "parameters" : {
+              "target" : targetList[i].ip,
               "message" : message
             }
           };
@@ -1491,9 +1512,9 @@
         var count = document.getElementById('master-message-flood-count-range').value;
         for(var i = 0; i < targetList.length; i++){
           var command = {
-            "target" : targetList[i].ip,
             "command" : "nping_icmp_flood",
             "parameters" : {
+              "target" : targetList[i].ip,
               "message" : message,
               "delay" : delay,
               "count" : count
@@ -1539,9 +1560,9 @@
         var shape = document.getElementById('master-shape-select').value;
         for(var i = 0; i < targetList.length ;i++){
           var command = {
-            "target" : targetList[i].ip,
             "command" : "tone",
             "parameters" : {
+              "target" : targetList[i].ip,
               "frequency":frequency,
               "amplitude":1.0,
               "duration":duration,
@@ -1599,9 +1620,9 @@
         }
         for(var i = 0; i < targetList.length ;i++){
           var command = {
-            "target" : targetList[i].ip,
             "command" : "scan",
             "parameters" : {
+              "target" : targetList[i].ip,
               "args": parameters
             }
           };

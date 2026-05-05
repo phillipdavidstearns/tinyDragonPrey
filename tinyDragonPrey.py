@@ -57,38 +57,46 @@ def shutdown():
 #===========================================================================
 
 @async_wrapper
-def startRogueAP(interface, parameters):
+def startRogueAP(parameters):
   try:
     # use provided MAC, if none, pick a random one
-    MAC = parameters['MAC'] if parameters['MAC'] else os.urandom(6).hex()
+    MAC = parameters['mac_address'] if parameters['mac_address'] else os.urandom(6).hex()
 
-    #format the MAC Address to spoof
+    # format the MAC Address to spoof
     MAC = f"{MAC[:2]}:{MAC[2:4]}:{MAC[4:6]}:{MAC[6:8]}:{MAC[8:10]}:{MAC[10:12]}"
 
+    # render the NetworkManager connection config file
     config = networkmanager_template.render(
-      interface=interface,
-      ssid=parameters['SSID'],
+      interface=parameters['interface'],
+      ssid=parameters['ssid'],
       ip_address=parameters['ip_address'],
       channel=parameters['channel'],
       password=parameters['password'],
       mac_address=MAC
     )
-    with open(f"/etc/NetworkManager/system-connections/{interface}.nmconnection", "w") as file:
-      file.write(config)
 
+    # save the file
+    filename = f"/etc/NetworkManager/system-connections/{parameters['interface']}.nmconnection"
+    with open(filename, "w") as file:
+      file.write(config)
+    os.chmod(filename, 0o600)
+
+    # reloads all connections, imports new config files and settings
     subprocess.run(
       ["sudo", "nmcli", "connection", "reload"],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
 
+    # activate the AP with the new config settings
     subprocess.run(
-      ["sudo", "mncli", "connection", "up", interface],
+      ["sudo", "nmcli", "connection", "up", parameters['interface']],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
 
   except Exception as e:
+    logging.error(f"startRogueAP: {e}")
     pass
 
 #----------------------------------------------------------------
@@ -97,7 +105,7 @@ def startRogueAP(interface, parameters):
 def stopRogueAP(interface):
   try:
     subprocess.run(
-      ["sudo", "mncli", "connection", "down", interface],
+      ["sudo", "nmcli", "connection", "down", interface],
       stdout=subprocess.DEVNULL,
       stderr=subprocess.DEVNULL
     )
@@ -108,18 +116,22 @@ def stopRogueAP(interface):
 
 @async_wrapper
 def setMonitorMode(interface, enable):
-  logging.debug(f"setMonitorMode({interface}, {enable})")
- 
+
+  # bring down the interface
   subprocess.run(
     ["sudo", "ip", "link", "set", interface, "down"],
     stdout=subprocess.DEVNULL,
     stderr=subprocess.DEVNULL
   )
+
+  # set the interface mode
   subprocess.run(
     ["sudo", "iwconfig", interface, "mode", "monitor" if enable else "managed"],
     stdout=subprocess.DEVNULL,
     stderr=subprocess.DEVNULL
   )
+
+  # bring the interface back up
   subprocess.run(
     ["sudo", "ip", "link", "set", interface, "up"],
     stdout=subprocess.DEVNULL,
@@ -130,7 +142,6 @@ def setMonitorMode(interface, enable):
 
 @async_wrapper
 def setWlanChannel(interface, channel):
-  logging.debug(f"interface: {interface}, channel: {channel}")
   subprocess.run(
     ["sudo", "iwconfig", interface, "channel", str(max(1, min(14, channel)))],
     stdout=subprocess.DEVNULL,
@@ -164,17 +175,17 @@ def getWifiDeviceInfo():
 
   phy_list = [
     line
-    for line in subprocess.check_output(["iw","list"]).split(b'Wiphy ')
+    for line in subprocess.check_output(["iw", "list"]).split(b'Wiphy ')
     if len(line) > 0
   ]
 
   dev_list = [
     line
-    for line in subprocess.check_output(["iw","dev"]).split(b'phy#')
+    for line in subprocess.check_output(["iw", "dev"]).split(b'phy#')
     if len(line) > 0
   ]
 
-  if len(phy_list) != len(dev_list): raise Exception('WTH!?! different number of devs and phys')
+  if len(phy_list) != len(dev_list): raise Exception(f"WTH!?! different number of devs ({len(dev_list)}) and phys ({len(phy_list)})")
 
   for i in range(len(dev_list)):
     dev_lines = [line.decode().lstrip() for line in dev_list[i].split(b'\n')]
@@ -299,7 +310,6 @@ def get_dragon_state():
 
 @async_wrapper
 def set_socket_interface(index, interface):
-  logging.debug(f"set_socket_interface({index}, {interface})")
   tinyDragon.set_socket_interface(index, interface)
 
 #===========================================================================
@@ -346,8 +356,6 @@ class MainHandler(BaseHandler):
           return
 
         matches = [iface for iface in interfaces if iface['interface'] == interface ]
-
-        logging.debug(f"matches for {interface}: {matches}")
 
         if len(matches) == 0:
           self.set_status(404)
@@ -418,7 +426,8 @@ class MainHandler(BaseHandler):
           command['parameters']['interface'],
           command['parameters']['channel']
         )
-      case 'start_ap': await startRogueAP(command['parameters'])
+      case 'start_ap':
+        await startRogueAP(command['parameters'])
       case 'stop_ap':
         await stopRogueAP(command['parameters']['interface'])
         await setMonitorMode(
@@ -459,8 +468,6 @@ if __name__ == "__main__":
       'templates'
     )
 
-    logging.debug(f"templatePath: {templatePath}")
-
     env = Environment(loader = FileSystemLoader(
       templatePath,
       followlinks = True
@@ -472,7 +479,7 @@ if __name__ == "__main__":
     signal(SIGHUP, signalHandler)
 
     tinyDragon = Dragon(
-      interfaces=config('INTERFACES', default=['eth0'], cast=lambda v: [s.strip() for s in v.split(',')]),
+      interfaces=config('INTERFACES', default=[], cast=lambda v: [s.strip() for s in v.split(',')]),
       audio_device_index=config('DEVICE', default=0, cast=int),
       chunk_size=config('CHUNK', default=1024, cast=int),
       sample_rate=config('RATE', default=44100, cast=int),
@@ -480,6 +487,7 @@ if __name__ == "__main__":
       print_enabled=config('PRINT', default=False, cast=bool),
       color_enabled=config('COLOR', default=False, cast=bool),
       linebreak_enabled=config('CONTROL_CHARACTERS', default=True, cast=bool),
+      qty_channels=config('AUDIO_CHANNELS', default=2, cast=int),
       audio_only=config('AUDIO_ONLY', default=True, cast=bool),
       log_aps = True
     )
@@ -495,8 +503,4 @@ if __name__ == "__main__":
   except Exception as e:
     logging.error(f'Ooops! {repr(e)}')
     traceback.print_exception(e)
-  finally:
-    IOLoop.current().stop()
-    if tinyDragon:
-      tinyDragon.stop()
-    sys.exit(0)
+    shutdown()

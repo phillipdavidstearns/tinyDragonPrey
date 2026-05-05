@@ -1,33 +1,30 @@
 [connection]
 id={{interface}}
 type=wifi
-interface-name={{interface}}
 autoconnect=false
+interface-name={{interface}}
 
 [wifi]
 band=bg
 channel={{channel}}
 mode=ap
-powersave=2
 ssid={{ssid}}
 
-[wifi-security]
-{% if password %}
-  key-mgmt=wpa-psk
-  pairwise=ccmp
-  group=ccmp
-  proto=rsn
-  psk={password}
-{% else %}
-  key-mgmt=none
-  auth-alg=none
+{% if password %}[wifi-security]
+key-mgmt=wpa-psk
+psk={{password}}
+pairwise=ccmp;
+group=ccmp;
+proto=rsn;
 {% endif %}
 
 [ipv4]
-address1={ip_address}/24
-gateway={ip_address}
+address1={{ip_address}}/24
+gateway={{ip_address}}
 method=shared
 
 [ipv6]
 addr-gen-mode=default
-method=disabled
+method=ignore
+
+[proxy]
