@@ -340,7 +340,10 @@ class MainHandler(BaseHandler):
           self.set_status(400)
           return
         interfaces = await availableInterfaces()
-        state.update({"interfaces" : interfaces})
+        state.update({
+          "interfaces" : interfaces,
+          "hostname" : socket.gethostname()
+        })
         self.write(state)
       case "interfaces":
         if not (interfaces := await availableInterfaces()):

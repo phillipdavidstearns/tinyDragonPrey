@@ -16,13 +16,13 @@
   // HTML node menu
 
   const row = document.createElement('div');
-  row.setAttribute('class', 'row align-items-center justify-content-center text-center');
+  row.setAttribute('class', 'row align-items-center mb-2 flex-nowrap');
 
   const col = document.createElement('div');
   col.setAttribute('class', 'col text-center');
 
   const formToggleDiv = document.createElement('div');
-  formToggleDiv.setAttribute('class','d-inline-block form-check form-switch');
+  formToggleDiv.setAttribute('class','align-items-center form-check form-switch');
 
   const formCheckDiv = document.createElement('div');
   formCheckDiv.setAttribute('class','form-check');
@@ -39,15 +39,24 @@
   const formLabel = document.createElement('label');
   formLabel.setAttribute('class','form-label m-1');
 
+  const rangeRow = document.createElement('div');
+  rangeRow.setAttribute('class', 'row align-items-center');
+
+  const rangeLabel = document.createElement('label');
+  rangeLabel.setAttribute('class','col-3 form-label m-1');
+
   const range = document.createElement('input');
   range.setAttribute('type', 'range');
-  range.setAttribute('class', 'form-range m-1');
+  range.setAttribute('class', 'col form-range');
+
+  const rangeValue = document.createElement('label');
+  rangeValue.setAttribute('class','col-2');
 
   const button = document.createElement('button');
-  button.setAttribute('class', 'btn btn-sm btn-outline-secondary m-1');
+  button.setAttribute('class', 'btn btn-sm btn-outline-secondary');
 
   const select = document.createElement('select');
-  select.setAttribute('class','form-select m-1');
+  select.setAttribute('class','form-select');
 
   //----------------------------------------------------------------
 
@@ -133,7 +142,9 @@
     const index = targetList.findIndex(item => item.ip === ip);
     console.log(`index of ${ip} in targetList = ${index}`);
 
-    for(let i = 0; i < targetList[index].state.audio_channels; i++){
+    const target = targetList[index];
+
+    for(let i = 0; i < target.state.audio_channels; i++){
       await updateInterfaceSection(ip, i);
     }
 
@@ -151,7 +162,7 @@
       document.getElementById(`${ip}-linebreaks-toggle`).checked = state.linebreaks_enable;
       document.getElementById(`${ip}-color-shift-range`).value = state.color_shift;
       document.getElementById(`${ip}-color-shift`).textContent = state.color_shift;
-      document.getElementById(`${ip}-title`).textContent = ip;
+      document.getElementById(`${ip}-title`).textContent = `${target.state.hostname} (${ip})`;;
 
     })
     .catch((error) => console.error(error));
@@ -199,16 +210,7 @@
 
     selectedInterfaces[ip][`socket${index}`] = socket_state.interface;
 
-    /* need to know:
-    1. socket information
-      1. interface name
-      2. is the socket open?
-    2. interface information
-      1. is it a wireless interface?
-        1. current mode
-        2. current channel
-    */
-
+    // gather the elements we want to change
     const monitorModeToggle = document.getElementById(`${ip}-monitor-toggle-${index}`);
     const channelRange = document.getElementById(`${ip}-channel-range-${index}`);
     const channelIntervalRange = document.getElementById(`${ip}-channel-interval-range-${index}`);
@@ -217,6 +219,7 @@
     const rogueAPToggle = document.getElementById(`${ip}-ap-toggle-${index}`);
     const rogueAPSelect = document.getElementById(`${ip}-ssid-select-${index}`);
 
+    // if there's no wifi_info, the interface has no wifi_capabilities. disable everything
     if (socket_state.wifi_info === null){
       monitorModeToggle.disabled = true;
       channelRange.disabled = true;
@@ -226,6 +229,7 @@
       rogueAPToggle.disabled = true;
       rogueAPSelect.disabled = true;
     } else {
+      // selectively enable based on capabilities in wifi_info
       let is_monitor_capable = new Set(socket_state.wifi_info.modes).has('monitor')
       monitorModeToggle.disabled = ! is_monitor_capable;
       monitorModeToggle.checked = socket_state.wifi_info.current_mode === "monitor";
@@ -234,7 +238,7 @@
       channelIndicator.textContent = socket_state.wifi_info.current_channel;
       channelIntervalRange.disabled = false;
       channelIntervalToggle.disabled = false;
-      rogueAPToggle.disabled = ! new Set(socket_state.wifi_info.modes).has('AP');
+      rogueAPToggle.disabled = ! new Set(socket_state.wifi_info.modes).has('AP') || socket_state.interface.match('^wlan[0-9]') != null;
       rogueAPToggle.checked = socket_state.wifi_info.current_mode === "master";
       rogueAPSelect.disabled = socket_state.wifi_info.current_mode === "master";
     }
@@ -243,33 +247,30 @@
   //----------------------------------------------------------------
 
   function rangeGenerator(name, params, id, event_type, callback, index){
-    var rangeRow = row.cloneNode();
-      var rangeLabelCol = col.cloneNode();
-        var rangeLabel = formLabel.cloneNode();
-        rangeLabel.setAttribute('for', `${id}-${name}-range-${ index || 'main'}`);
-        rangeLabel.textContent = name;
-      rangeLabelCol.appendChild(rangeLabel);
-    rangeRow.appendChild(rangeLabelCol);
+    var mainRow = row.cloneNode();
+      var label = rangeLabel.cloneNode();
+      label.setAttribute('for', `${id}-${name}-range-${ index || 'main'}`);
+      label.textContent = name;
 
-      var rangeCol = col.cloneNode();
-        var rangeGUI = range.cloneNode();
-        rangeGUI.setAttribute('class','form-range w-75');
-        rangeGUI.setAttribute('min', params.min);
-        rangeGUI.setAttribute('max', params.max);
-        rangeGUI.setAttribute('step', params.step);
-        rangeGUI.setAttribute('value', params.value);
-        rangeGUI.setAttribute('id',`${id}-${name}-range-${ index || 'main'}`);
-        rangeGUI.addEventListener(event_type, callback);
-      rangeCol.appendChild(rangeGUI);
-    rangeRow.appendChild(rangeCol);
+    mainRow.appendChild(label);
 
-      var indicatorCol = col.cloneNode();
-        var indicator = document.createElement('span');
-          indicator.setAttribute('id',`${id}-${name}-${index}`);
-          indicator.textContent='';
-      indicatorCol.appendChild(indicator);
-    rangeRow.appendChild(indicatorCol);
-    return rangeRow;
+      var rangeGUI = range.cloneNode();
+      rangeGUI.setAttribute('min', params.min);
+      rangeGUI.setAttribute('max', params.max);
+      rangeGUI.setAttribute('step', params.step);
+      rangeGUI.setAttribute('value', params.value);
+      rangeGUI.setAttribute('id',`${id}-${name}-range-${ index || 'main'}`);
+      rangeGUI.addEventListener(event_type, callback);
+
+    mainRow.appendChild(rangeGUI);
+
+      var indicator = rangeValue.cloneNode();
+      indicator.setAttribute('id',`${id}-${name}-${index}`);
+      indicator.textContent = params.value;
+
+    mainRow.appendChild(indicator);
+
+    return mainRow;
   }
 
   //----------------------------------------------------------------
@@ -282,9 +283,15 @@
       var socket = target.state.sockets.sockets[i];
 
       var interfaceDiv = document.createElement('div');
-        var titleRow = row.cloneNode();
-        titleRow.textContent = `Socket ${i+1} interface:`;
-          var interfaceCol = col.cloneNode();
+        var interfaceRow = row.cloneNode();
+
+          var interfaceNameCol = document.createElement('div');
+          interfaceNameCol.setAttribute('class','col-4 text-truncate')
+          interfaceNameCol.textContent = `Socket ${i+1} interface:`;
+        interfaceRow.appendChild(interfaceNameCol);
+
+          var interfaceSelectCol = document.createElement('div');
+          interfaceSelectCol.setAttribute('class','col')
             var interfaceSelect = select.cloneNode();
             interfaceSelect.setAttribute('id', `${target.ip}-interface-select-${i}`);
 
@@ -320,12 +327,13 @@
               await updateInterfaceSection(target.ip, i);
             });
 
-          interfaceCol.appendChild(interfaceSelect);
-        titleRow.appendChild(interfaceCol);
-      interfaceDiv.appendChild(titleRow);
+          interfaceSelectCol.appendChild(interfaceSelect);
+        interfaceRow.appendChild(interfaceSelectCol);
+      interfaceDiv.appendChild(interfaceRow);
 
         var wifiRow = row.cloneNode();
-          var wifiMonitorCol = col.cloneNode();
+          var wifiMonitorCol = document.createElement('div');
+          wifiMonitorCol.setAttribute('class','col-3 d-flex justify-content-center');
             var wifiMonitorToggleDiv = formToggleDiv.cloneNode();
               var wifiMonitorToggle = toggle.cloneNode();
               wifiMonitorToggle.setAttribute('id',`${target.ip}-monitor-toggle-${i}`);
@@ -348,13 +356,14 @@
               });
               var wifiMonitorToggleLabel = formCheckLabel.cloneNode();
               wifiMonitorToggleLabel.setAttribute('for',`${target.ip}-monitor-toggle-${i}`);
-              wifiMonitorToggleLabel.textContent=`monitor mode`;
+              wifiMonitorToggleLabel.textContent=`monitor`;
             wifiMonitorToggleDiv.appendChild(wifiMonitorToggle);
             wifiMonitorToggleDiv.appendChild(wifiMonitorToggleLabel);
           wifiMonitorCol.appendChild(wifiMonitorToggleDiv);
         wifiRow.appendChild(wifiMonitorCol);
 
-          var wifiChannelCol = col.cloneNode();
+          var wifiChannelCol = document.createElement('div');
+          wifiChannelCol.setAttribute('class','col');
             var wifiChannelRange = rangeGenerator(
               "channel",
               {
@@ -387,34 +396,37 @@
       interfaceDiv.appendChild(wifiRow);
 
         var wifiIntervalRow = row.cloneNode();
-          var wifiIntervalCol = col.cloneNode();
-            var wifiIntervalRangeLabel = formLabel.cloneNode();
-            wifiIntervalRangeLabel.setAttribute('for',`${target.ip}-channel-interval-range-${i}`);
-            wifiIntervalRangeLabel.textContent='interval';
-            var wifiIntervalRange = range.cloneNode();
-            wifiIntervalRange.setAttribute('class','form-range w-50');
-            wifiIntervalRange.setAttribute('min','25');
-            wifiIntervalRange.setAttribute('max','2500');
-            wifiIntervalRange.setAttribute('step','1');
-            wifiIntervalRange.setAttribute('value','1000');
-            wifiIntervalRange.setAttribute('id',`${target.ip}-channel-interval-range-${i}`);
-            wifiIntervalRange.addEventListener('input', async (e) => {
-              document.getElementById(`${target.ip}-channel-interval-${i}`).textContent = e.target.value;
-            });
-            var wifiIntervalIndicator = document.createElement('span');
-            wifiIntervalIndicator.setAttribute('id',`${target.ip}-channel-interval-${i}`);
-            wifiIntervalIndicator.textContent='1000';
-          wifiIntervalCol.appendChild(wifiIntervalRangeLabel);
-          wifiIntervalCol.appendChild(wifiIntervalRange);
-          wifiIntervalCol.appendChild(wifiIntervalIndicator);
-          var wifiIntervalToggleCol = col.cloneNode();
+          var wifiIntervalRangeCol = document.createElement('div');
+          wifiIntervalRangeCol.setAttribute('class', 'col');
+            var wifiIntervalRangeRow = rangeRow.cloneNode();
+              var wifiIntervalRangeLabel = rangeLabel.cloneNode();
+              wifiIntervalRangeLabel.setAttribute('for',`${target.ip}-channel-interval-range-${i}`);
+              wifiIntervalRangeLabel.textContent='interval';
+            wifiIntervalRangeRow.appendChild(wifiIntervalRangeLabel);
+              var wifiIntervalRange = range.cloneNode();
+              wifiIntervalRange.setAttribute('min','25');
+              wifiIntervalRange.setAttribute('max','2500');
+              wifiIntervalRange.setAttribute('step','1');
+              wifiIntervalRange.setAttribute('value','1000');
+              wifiIntervalRange.setAttribute('id',`${target.ip}-channel-interval-range-${i}`);
+              wifiIntervalRange.addEventListener('input', async (e) => {
+                document.getElementById(`${target.ip}-channel-interval-${i}`).textContent = e.target.value;
+              });
+            wifiIntervalRangeRow.appendChild(wifiIntervalRange);
+              var wifiIntervalIndicator = rangeValue.cloneNode()
+              wifiIntervalIndicator.setAttribute('id',`${target.ip}-channel-interval-${i}`);
+              wifiIntervalIndicator.textContent = '1000';
+            wifiIntervalRangeRow.appendChild(wifiIntervalIndicator);
+          wifiIntervalRangeCol.appendChild(wifiIntervalRangeRow);
+        wifiIntervalRow.appendChild(wifiIntervalRangeCol);
+
+          var wifiIntervalToggleCol = document.createElement('div');
+          wifiIntervalToggleCol.setAttribute('class', 'col-3 d-flex justify-content-center')
             var wifiIntervalToggleDiv = formToggleDiv.cloneNode();
               var wifiIntervalToggle = toggle.cloneNode();
               wifiIntervalToggle.setAttribute('id',`${target.ip}-channel-interval-toggle-${i}`);
               wifiIntervalToggle.addEventListener('change', e => {
-                if(e.target.checked){
-                  channelInterval(target.ip, i);
-                }
+                if (e.target.checked) channelInterval(target.ip, i);
               });
               var wifiIntervalToggleLabel = formCheckLabel.cloneNode();
               wifiIntervalToggleLabel.setAttribute('for',`${target.ip}-channel-interval-toggle-${i}`);
@@ -422,7 +434,6 @@
             wifiIntervalToggleDiv.appendChild(wifiIntervalToggle);
             wifiIntervalToggleDiv.appendChild(wifiIntervalToggleLabel);
           wifiIntervalToggleCol.appendChild(wifiIntervalToggleDiv);
-        wifiIntervalRow.appendChild(wifiIntervalCol);
         wifiIntervalRow.appendChild(wifiIntervalToggleCol);
       interfaceDiv.appendChild(wifiIntervalRow);
 
@@ -440,7 +451,7 @@
             });
           rogueAPSSIDCol.appendChild(rogueAPSSIDButton);
           var rogueAPSelectCol = document.createElement('div');
-          rogueAPSelectCol.setAttribute('class','col-10');
+          rogueAPSelectCol.setAttribute('class','col');
             var rogueAPSelect = select.cloneNode();
             rogueAPSelect.setAttribute('id',`${target.ip}-ssid-select-${i}`);
           rogueAPSelectCol.appendChild(rogueAPSelect);
@@ -512,18 +523,31 @@
     //----------------------------------------------------------------
     //Construction
 
-    
     // Main Panel
     var panel = document.createElement('div');
-    panel.setAttribute('class','col-6 border border-1 rounded p-3');
+    panel.setAttribute('class','col border border-1 rounded p-3');
     panel.setAttribute('id',`${target.ip}`);
 
       // Title is basically just the IP of the target
-      var title = document.createElement('p');
-      title.setAttribute('class','text-center h4');
-      title.setAttribute('id',`${target.ip}-title`);
-      title.textContent =`${target.ip}`;
-      
+      var titleRow = row.cloneNode();
+        var titleCol = document.createElement('div');
+          // var title = document.createElement('p');
+          titleCol.setAttribute('class','col text-center h4');
+          titleCol.setAttribute('id',`${target.ip}-title`);
+        // titleCol.appendChild(title);
+      titleRow.appendChild(titleCol);
+        var refreshButtonCol = document.createElement('div');
+        refreshButtonCol.setAttribute('class', 'col-3');
+          var refreshButton = button.cloneNode();
+          refreshButton.setAttribute('id',`${target.ip}-refresh-button`);
+          refreshButton.textContent ='refresh';
+          refreshButton.addEventListener('click', async (e) => {
+            await updateStatus(target.ip);
+            await updateAPSelect(target.ip);
+          });
+        refreshButtonCol.appendChild(refreshButton);
+      titleRow.appendChild(refreshButtonCol);
+
       //----------------------------------------------------------------
       // Text manipulation controls
       // Should be hidden if target.state.writers === null
@@ -531,7 +555,7 @@
       var writerDiv = document.createElement('div');
       writerDiv.appendChild(hr.cloneNode());
       if (target.state.writer === null) writerDiv.hidden = true;
-      
+
         var textRow = row.cloneNode();
           var printCol = col.cloneNode();
             var printToggleDiv = formToggleDiv.cloneNode();
@@ -694,7 +718,7 @@
       //----------------------------------------------------------------
       // Socket Controls
       // By default, there will be two slots. One for each analog output on the Raspberry Pi
-      
+
       var interfaceDivs = createWifiRows(target);
 
       //----------------------------------------------------------------
@@ -736,27 +760,36 @@
       sendRow.appendChild(sendCol);
 
       var messageIntervalRow = row.cloneNode();
-        var messageIntervalCol = col.cloneNode();
-          var messageIntervalRangeLabel = formLabel.cloneNode();
-          messageIntervalRangeLabel.setAttribute('for',`${target.ip}-message-interval-range`);
-          messageIntervalRangeLabel.textContent='interval';
-          var messageIntervalRange = range.cloneNode();
-          messageIntervalRange.setAttribute('class','form-range w-75');
-          messageIntervalRange.setAttribute('min','25');
-          messageIntervalRange.setAttribute('max','2500');
-          messageIntervalRange.setAttribute('step','1');
-          messageIntervalRange.setAttribute('value','1000');
-          messageIntervalRange.setAttribute('id',`${target.ip}-message-interval-range`);
-          messageIntervalRange.addEventListener('input', e => {
-            document.getElementById(`${target.ip}-message-interval`).textContent = e.target.value;
-          });
-          var messageIntervalIndicator = document.createElement('span');
-          messageIntervalIndicator.setAttribute('id',`${target.ip}-message-interval`);
-          messageIntervalIndicator.textContent='1000';
-        messageIntervalCol.appendChild(messageIntervalRangeLabel);
-        messageIntervalCol.appendChild(messageIntervalRange);
-        messageIntervalCol.appendChild(messageIntervalIndicator);
-        var messageIntervalToggleCol = col.cloneNode();
+        var messageIntervalRangeCol = document.createElement('div');
+          messageIntervalRangeCol.setAttribute('class', 'col');
+
+          var messageIntervalRangeRow = rangeRow.cloneNode();
+
+            var messageIntervalRangeLabel = rangeLabel.cloneNode();
+            messageIntervalRangeLabel.setAttribute('for',`${target.ip}-message-interval-range`);
+            messageIntervalRangeLabel.textContent='interval';
+          messageIntervalRangeRow.appendChild(messageIntervalRangeLabel);
+
+            var messageIntervalRange = range.cloneNode();
+            messageIntervalRange.setAttribute('min','25');
+            messageIntervalRange.setAttribute('max','2500');
+            messageIntervalRange.setAttribute('step','1');
+            messageIntervalRange.setAttribute('value','1000');
+            messageIntervalRange.setAttribute('id',`${target.ip}-message-interval-range`);
+            messageIntervalRange.addEventListener('input', e => {
+              document.getElementById(`${target.ip}-message-interval`).textContent = e.target.value;
+            });
+          messageIntervalRangeRow.appendChild(messageIntervalRange);
+
+            var messageIntervalIndicator = rangeValue.cloneNode();
+            messageIntervalIndicator.setAttribute('id',`${target.ip}-message-interval`);
+            messageIntervalIndicator.textContent='1000';
+          messageIntervalRangeRow.appendChild(messageIntervalIndicator);
+        messageIntervalRangeCol.appendChild(messageIntervalRangeRow);
+      messageIntervalRow.appendChild(messageIntervalRangeCol);
+
+        var messageIntervalToggleCol = document.createElement('div');
+          messageIntervalToggleCol.setAttribute('class', 'col-3 d-flex justify-content-center');
           var messageIntervalToggleDiv = formToggleDiv.cloneNode();
             var messageIntervalToggle = toggle.cloneNode();
             messageIntervalToggle.setAttribute('id',`${target.ip}-message-interval-toggle`);
@@ -771,52 +804,55 @@
           messageIntervalToggleDiv.appendChild(messageIntervalToggle);
           messageIntervalToggleDiv.appendChild(messageIntervalToggleLabel);
         messageIntervalToggleCol.appendChild(messageIntervalToggleDiv);
-      messageIntervalRow.appendChild(messageIntervalCol);
       messageIntervalRow.appendChild(messageIntervalToggleCol);
 
       var floodRow = row.cloneNode();
         var floodDelayCol = col.cloneNode();
-          var floodDelayRangeLabel = formLabel.cloneNode();
-          floodDelayRangeLabel.setAttribute('for',`${target.ip}-message-flood-delay-range`);
-          floodDelayRangeLabel.textContent='delay';
-          var floodDelayRange = range.cloneNode();
-          floodDelayRange.setAttribute('class','form-range w-75');
-          floodDelayRange.setAttribute('min','0.0');
-          floodDelayRange.setAttribute('max','1.0');
-          floodDelayRange.setAttribute('step','0.001');
-          floodDelayRange.setAttribute('value','0.500');
-          floodDelayRange.setAttribute('id',`${target.ip}-message-flood-delay-range`);
-          floodDelayRange.addEventListener('input', e => {
-            document.getElementById(`${target.ip}-message-flood-delay`).textContent = parseFloat(e.target.value).toFixed(3);
-          });
-          var floodDelayIndicator = document.createElement('span');
-          floodDelayIndicator.setAttribute('id',`${target.ip}-message-flood-delay`);
-          floodDelayIndicator.textContent='0.500';
-        floodDelayCol.appendChild(floodDelayRangeLabel);
-        floodDelayCol.appendChild(floodDelayRange);
-        floodDelayCol.appendChild(floodDelayIndicator);
+          var floodDelayRow = rangeRow.cloneNode();
+            var floodDelayRangeLabel = rangeLabel.cloneNode();
+            floodDelayRangeLabel.setAttribute('for',`${target.ip}-message-flood-delay-range`);
+            floodDelayRangeLabel.textContent='delay';
+          floodDelayRow.appendChild(floodDelayRangeLabel);
+            var floodDelayRange = range.cloneNode();
+            floodDelayRange.setAttribute('min','0.0');
+            floodDelayRange.setAttribute('max','1.0');
+            floodDelayRange.setAttribute('step','0.001');
+            floodDelayRange.setAttribute('value','0.500');
+            floodDelayRange.setAttribute('id',`${target.ip}-message-flood-delay-range`);
+            floodDelayRange.addEventListener('input', e => {
+              document.getElementById(`${target.ip}-message-flood-delay`).textContent = parseFloat(e.target.value).toFixed(3);
+            });
+          floodDelayRow.appendChild(floodDelayRange);
+            var floodDelayIndicator = rangeValue.cloneNode();
+            floodDelayIndicator.setAttribute('id',`${target.ip}-message-flood-delay`);
+            floodDelayIndicator.textContent='0.500';
+          floodDelayRow.appendChild(floodDelayIndicator);
+        floodDelayCol.appendChild(floodDelayRow);
+      floodRow.appendChild(floodDelayCol);
 
         var floodCountCol = col.cloneNode();
-          var floodCountRangeLabel = formLabel.cloneNode();
-          floodCountRangeLabel.setAttribute('for',`${target.ip}-message-flood-count-range`);
-          floodCountRangeLabel.textContent='count';
-          var floodCountRange = range.cloneNode();
-          floodCountRange.setAttribute('class','form-range w-75');
-          floodCountRange.setAttribute('min','1');
-          floodCountRange.setAttribute('max','100');
-          floodCountRange.setAttribute('step','1');
-          floodCountRange.setAttribute('value','5');
-          floodCountRange.setAttribute('id',`${target.ip}-message-flood-count-range`);
-          floodCountRange.addEventListener('input', e => {
-            document.getElementById(`${target.ip}-message-flood-count`).textContent = e.target.value;
-          });
-          var floodCountIndicator = document.createElement('span');
-          floodCountIndicator.setAttribute('id',`${target.ip}-message-flood-count`);
-          floodCountIndicator.textContent='5';
-        floodCountCol.appendChild(floodCountRangeLabel);
-        floodCountCol.appendChild(floodCountRange);
-        floodCountCol.appendChild(floodCountIndicator);
-      floodRow.appendChild(floodDelayCol);
+          var floodCountRow = rangeRow.cloneNode();
+            var floodCountRangeLabel = rangeLabel.cloneNode();
+            floodCountRangeLabel.setAttribute('for',`${target.ip}-message-flood-count-range`);
+            floodCountRangeLabel.textContent='count';
+          floodCountRow.appendChild(floodCountRangeLabel);
+
+            var floodCountRange = range.cloneNode();
+            floodCountRange.setAttribute('min','1');
+            floodCountRange.setAttribute('max','100');
+            floodCountRange.setAttribute('step','1');
+            floodCountRange.setAttribute('value','5');
+            floodCountRange.setAttribute('id',`${target.ip}-message-flood-count-range`);
+            floodCountRange.addEventListener('input', e => {
+              document.getElementById(`${target.ip}-message-flood-count`).textContent = e.target.value;
+            });
+          floodCountRow.appendChild(floodCountRange);
+
+            var floodCountIndicator = rangeValue.cloneNode();
+            floodCountIndicator.setAttribute('id',`${target.ip}-message-flood-count`);
+            floodCountIndicator.textContent='5';
+          floodCountRow.appendChild(floodCountIndicator);
+        floodCountCol.appendChild(floodCountRow);
       floodRow.appendChild(floodCountCol);
 
       var floodSendRow = row.cloneNode();
@@ -847,7 +883,7 @@
 
       var toneShapeRow = row.cloneNode();
         var randomShapeCol = document.createElement('div');
-        randomShapeCol.setAttribute('class','col-1');
+        randomShapeCol.setAttribute('class','col-2 text-truncate');
           var randomShapeToggleDiv = formCheckDiv.cloneNode();
             var randomShapeToggle = toggle.cloneNode();
             randomShapeToggle.setAttribute('id',`${target.ip}-shape-random-toggle`);
@@ -857,14 +893,14 @@
           randomShapeToggleDiv.appendChild(randomShapeToggle);
           randomShapeToggleDiv.appendChild(randomShapeToggleLabel);
         randomShapeCol.appendChild(randomShapeToggleDiv);
+
         var shapeSelectCol = document.createElement('div');
-        shapeSelectCol.setAttribute('class','col-11');
+        shapeSelectCol.setAttribute('class','col');
           var shapeSelect = select.cloneNode();
           shapeSelect.setAttribute('id',`${target.ip}-shape-select`);
             var options = ['sine', 'tri', 'square', 'random', 'noise'];
-            var option;
             for(var i = 0; i < options.length; i++){
-              option = document.createElement('option');
+              var option = document.createElement('option');
               option.value = options[i];
               option.textContent = options[i];
               if (options[i] == 'random'){
@@ -878,7 +914,7 @@
 
       var toneParamsRow = row.cloneNode();
         var freqRandCol = document.createElement('div');
-        freqRandCol.setAttribute('class','col-1');
+        freqRandCol.setAttribute('class','col-2 text-truncate');
           var freqRandToggleDiv = formCheckDiv.cloneNode();
             var freqRandToggle = toggle.cloneNode();
             freqRandToggle.setAttribute('id',`${target.ip}-frequency-random-toggle`);
@@ -888,24 +924,26 @@
           freqRandToggleDiv.appendChild(freqRandToggle);
           freqRandToggleDiv.appendChild(freqRandToggleLabel);
         freqRandCol.appendChild(freqRandToggleDiv);
+      toneParamsRow.appendChild(freqRandCol);
 
-        var freqRangeCol = document.createElement('div');
-        freqRangeCol.setAttribute('class','col-8');
-          var freqRange = range.cloneNode();
-          freqRange.setAttribute('class','form-range w-75');
-          freqRange.setAttribute('min','10');
-          freqRange.setAttribute('max','10000');
-          freqRange.setAttribute('step','0.1');
-          freqRange.setAttribute('value','1000');
-          freqRange.setAttribute('id',`${target.ip}-frequency-range`);
-          freqRange.addEventListener('input', e => {
-            document.getElementById(`${target.ip}-frequency`).value = e.target.value;
-          });
-          var freqRangeLabel = formLabel.cloneNode();
-          freqRangeLabel.setAttribute('for',`${target.ip}-freq-range`);
-          freqRangeLabel.textContent='freq';
-        freqRangeCol.appendChild(freqRange);
-        freqRangeCol.appendChild(freqRangeLabel);
+        var freqRangeCol = col.cloneNode();
+          var freqRangeRow = rangeRow.cloneNode();
+            var freqRange = range.cloneNode();
+            freqRange.setAttribute('min','10');
+            freqRange.setAttribute('max','10000');
+            freqRange.setAttribute('step','0.1');
+            freqRange.setAttribute('value','1000');
+            freqRange.setAttribute('id',`${target.ip}-frequency-range`);
+            freqRange.addEventListener('input', e => {
+              document.getElementById(`${target.ip}-frequency`).value = e.target.value;
+            });
+          freqRangeRow.appendChild(freqRange);
+            var freqRangeLabel = rangeLabel.cloneNode();
+            freqRangeLabel.setAttribute('for',`${target.ip}-freq-range`);
+            freqRangeLabel.textContent='freq';
+          freqRangeRow.appendChild(freqRangeLabel);
+        freqRangeCol.appendChild(freqRangeRow);
+      toneParamsRow.appendChild(freqRangeCol);
 
         var freqNumberCol = document.createElement('div');
         freqNumberCol.setAttribute('class','col-3');
@@ -920,13 +958,12 @@
             document.getElementById(`${target.ip}-frequency-range`).value = e.target.value;
           });
         freqNumberCol.appendChild(freqNumber);
-      toneParamsRow.appendChild(freqRandCol);
-      toneParamsRow.appendChild(freqRangeCol);
       toneParamsRow.appendChild(freqNumberCol);
 
+      //Tone Duration Row
       var durationRow = row.cloneNode();
         var durationRandCol = document.createElement('div');
-        durationRandCol.setAttribute('class','col-1');
+        durationRandCol.setAttribute('class','col-2 text-truncate');
           var durationRandToggleDiv = formCheckDiv.cloneNode();
             var durationRandToggle = toggle.cloneNode();
             durationRandToggle.setAttribute('id',`${target.ip}-duration-random-toggle`);
@@ -936,24 +973,26 @@
           durationRandToggleDiv.appendChild(durationRandToggle);
           durationRandToggleDiv.appendChild(durationRandToggleLabel);
         durationRandCol.appendChild(durationRandToggleDiv);
+      durationRow.appendChild(durationRandCol);
 
-        var durationRangeCol = document.createElement('div');
-        durationRangeCol.setAttribute('class','col-8');
-          var durationRange = range.cloneNode();
-          durationRange.setAttribute('class','form-range w-75');
-          durationRange.setAttribute('min','2');
-          durationRange.setAttribute('max','8164');
-          durationRange.setAttribute('step','1');
-          durationRange.setAttribute('value','500');
-          durationRange.setAttribute('id',`${target.ip}-duration-range`);
-          durationRange.addEventListener('input', e => {
-            document.getElementById(`${target.ip}-duration`).value=e.target.value;
-          });
-          var durationRangeLabel = formLabel.cloneNode();
-          durationRangeLabel.setAttribute('for',`${target.ip}-duration-range`);
-          durationRangeLabel.textContent='duration';
-        durationRangeCol.appendChild(durationRange);
-        durationRangeCol.appendChild(durationRangeLabel);
+        var durationRangeCol = col.cloneNode();
+          var durationRangeRow = rangeRow.cloneNode();
+            var durationRange = range.cloneNode();
+            durationRange.setAttribute('min','2');
+            durationRange.setAttribute('max','1400');
+            durationRange.setAttribute('step','1');
+            durationRange.setAttribute('value','500');
+            durationRange.setAttribute('id',`${target.ip}-duration-range`);
+            durationRange.addEventListener('input', e => {
+              document.getElementById(`${target.ip}-duration`).value=e.target.value;
+            });
+          durationRangeRow.appendChild(durationRange);
+            var durationRangeLabel = rangeLabel.cloneNode();
+            durationRangeLabel.setAttribute('for',`${target.ip}-duration-range`);
+            durationRangeLabel.textContent='duration';
+          durationRangeRow.appendChild(durationRangeLabel);
+        durationRangeCol.appendChild(durationRangeRow);
+      durationRow.appendChild(durationRangeCol);
 
         var durationNumberCol = document.createElement('div');
         durationNumberCol.setAttribute('class','col-3');
@@ -961,20 +1000,19 @@
           durationNumber.setAttribute('class','form-control');
           durationNumber.setAttribute('type','number');
           durationNumber.setAttribute('min','2');
-          durationNumber.setAttribute('max','8164');
+          durationNumber.setAttribute('max','1400');
           durationNumber.setAttribute('value','500');
           durationNumber.setAttribute('id',`${target.ip}-duration`);
           durationNumber.addEventListener('change', e => {
             document.getElementById(`${target.ip}-duration-range`).value = e.target.value;
           });
         durationNumberCol.appendChild(durationNumber);
-      durationRow.appendChild(durationRandCol);
-      durationRow.appendChild(durationRangeCol);
       durationRow.appendChild(durationNumberCol);
 
+      //Tone Interval Row
       var toneIntervalRow = row.cloneNode();
         var randomToneIntervalCol = document.createElement('div');
-        randomToneIntervalCol.setAttribute('class','col-1');
+        randomToneIntervalCol.setAttribute('class','col-2');
           var randomToneIntervalToggleDiv = formCheckDiv.cloneNode();
             var randomToneIntervalToggle = toggle.cloneNode();
             randomToneIntervalToggle.setAttribute('id',`${target.ip}-interval-random-toggle`);
@@ -984,37 +1022,44 @@
           randomToneIntervalToggleDiv.appendChild(randomToneIntervalToggle);
           randomToneIntervalToggleDiv.appendChild(randomToneIntervalToggleLabel);
         randomToneIntervalCol.appendChild(randomToneIntervalToggleDiv);
-        var toneIntervalRangeCol = document.createElement('div');
-        toneIntervalRangeCol.setAttribute('class','col-7');
-          var toneIntervalRangeLabel = formLabel.cloneNode();
-          toneIntervalRangeLabel.setAttribute('for',`${target.ip}-tone-interval-range`);
-          toneIntervalRangeLabel.textContent='interval';
-          var toneIntervalRange = range.cloneNode();
-          toneIntervalRange.setAttribute('class','form-range w-75');
-          toneIntervalRange.setAttribute('min','50');
-          toneIntervalRange.setAttribute('max','2500');
-          toneIntervalRange.setAttribute('step','1');
-          toneIntervalRange.setAttribute('value','1000');
-          toneIntervalRange.setAttribute('id',`${target.ip}-tone-interval-range`);
-          toneIntervalRange.addEventListener('input', e => {
-            document.getElementById(`${target.ip}-tone-interval`).value = e.target.value;
-          });
-        toneIntervalRangeCol.appendChild(toneIntervalRangeLabel);
-        toneIntervalRangeCol.appendChild(toneIntervalRange);
-        var toneIntervalNumberCol = document.createElement('div');
-        toneIntervalNumberCol.setAttribute('class','col-2');
-          var toneIntervalNumber = document.createElement('input');
-          toneIntervalNumber.setAttribute('class','form-control');
-          toneIntervalNumber.setAttribute('type','number');
-          toneIntervalNumber.setAttribute('min','50');
-          toneIntervalNumber.setAttribute('max','2500');
-          toneIntervalNumber.setAttribute('value','1000');
-          toneIntervalNumber.setAttribute('id',`${target.ip}-tone-interval`);
-          toneIntervalNumber.addEventListener('change', e => {
-            document.getElementById(`${target.ip}-tone-interval-range`).value = e.target.value;
-          });
-        toneIntervalNumberCol.appendChild(toneIntervalNumber);
-        var toneIntervalToggleCol = col.cloneNode();
+      toneIntervalRow.appendChild(randomToneIntervalCol);
+
+        var toneIntervalRangeCol = col.cloneNode();
+          var toneIntervalRangeRow = rangeRow.cloneNode();
+            var toneIntervalRangeLabel = rangeLabel.cloneNode();
+            toneIntervalRangeLabel.setAttribute('for',`${target.ip}-tone-interval-range`);
+            toneIntervalRangeLabel.textContent='interval';
+          toneIntervalRangeRow.appendChild(toneIntervalRangeLabel);
+
+            var toneIntervalRange = range.cloneNode();
+            toneIntervalRange.setAttribute('min','50');
+            toneIntervalRange.setAttribute('max','2500');
+            toneIntervalRange.setAttribute('step','1');
+            toneIntervalRange.setAttribute('value','1000');
+            toneIntervalRange.setAttribute('id',`${target.ip}-tone-interval-range`);
+            toneIntervalRange.addEventListener('input', e => {
+              document.getElementById(`${target.ip}-tone-interval`).value = e.target.value;
+            });
+          toneIntervalRangeRow.appendChild(toneIntervalRange);
+            var toneIntervalNumberCol = document.createElement('div');
+            toneIntervalNumberCol.setAttribute('class','col-3');
+              var toneIntervalNumber = document.createElement('input');
+              toneIntervalNumber.setAttribute('class','form-control');
+              toneIntervalNumber.setAttribute('type','number');
+              toneIntervalNumber.setAttribute('min','50');
+              toneIntervalNumber.setAttribute('max','2500');
+              toneIntervalNumber.setAttribute('value','1000');
+              toneIntervalNumber.setAttribute('id',`${target.ip}-tone-interval`);
+              toneIntervalNumber.addEventListener('change', e => {
+                document.getElementById(`${target.ip}-tone-interval-range`).value = e.target.value;
+              });
+            toneIntervalNumberCol.appendChild(toneIntervalNumber);
+          toneIntervalRangeRow.appendChild(toneIntervalNumberCol) 
+        toneIntervalRangeCol.appendChild(toneIntervalRangeRow);
+      toneIntervalRow.appendChild(toneIntervalRangeCol);
+
+        var toneIntervalToggleCol = document.createElement('div');
+        toneIntervalToggleCol.setAttribute('class','col-2');
           var toneIntervalToggleDiv = formToggleDiv.cloneNode();
             var toneIntervalToggle = toggle.cloneNode();
             toneIntervalToggle.setAttribute('id',`${target.ip}-tone-interval-toggle`);
@@ -1023,18 +1068,15 @@
                 toneInterval(target.ip);
               }
             });
+          toneIntervalToggleDiv.appendChild(toneIntervalToggle);
             var toneIntervalToggleLabel = formCheckLabel.cloneNode();
             toneIntervalToggleLabel.setAttribute('for',`${target.ip}-tone-interval-toggle`);
             toneIntervalToggleLabel.textContent='repeat';
-            
-          toneIntervalToggleDiv.appendChild(toneIntervalToggle);
           toneIntervalToggleDiv.appendChild(toneIntervalToggleLabel);
         toneIntervalToggleCol.appendChild(toneIntervalToggleDiv);
-      toneIntervalRow.appendChild(randomToneIntervalCol);
-      toneIntervalRow.appendChild(toneIntervalRangeCol);
-      toneIntervalRow.appendChild(toneIntervalNumberCol);
       toneIntervalRow.appendChild(toneIntervalToggleCol);
 
+      //Beep Row
       var beepRow = row.cloneNode();
         var beepCol = col.cloneNode();
           var beepButton = button.cloneNode();
@@ -1062,15 +1104,16 @@
         beepCol.appendChild(beepButton);
       beepRow.appendChild(beepCol);
 
+      //NMAP Scan Controls
+
       var scanRow = row.cloneNode();
         var scanModeCol = document.createElement('div');
-        scanModeCol.setAttribute('class','col-2');
+        scanModeCol.setAttribute('class','col-3 d-flex justify-content-end');
           var scanModeSelect = select.cloneNode();
           scanModeSelect.setAttribute('id',`${target.ip}-scan-mode-select`);
             var options = ['-sS','-sT','-sA','-sX'];
-            var option;
             for(var i = 0; i < options.length; i++){
-              option = document.createElement('option');
+              var option = document.createElement('option');
               option.value = options[i];
               option.textContent = options[i];
               if(options[i]=='-sT'){
@@ -1079,53 +1122,82 @@
               scanModeSelect.appendChild(option);
             }
         scanModeCol.appendChild(scanModeSelect);
-        var scanOptionSyCol = document.createElement('div');
-        scanOptionSyCol.setAttribute('class','col-1');
-          var scanOptionSyToggle = toggle.cloneNode();
-          scanOptionSyToggle.setAttribute('id',`${target.ip}-scan-option-sy`);
-          var scanOptionSyLabel = formCheckLabel.cloneNode();
-          scanOptionSyLabel.setAttribute('for',`${target.ip}-scan-option-sy`);
-          scanOptionSyLabel.textContent = 'sY';
-        scanOptionSyCol.appendChild(scanOptionSyToggle);
-        scanOptionSyCol.appendChild(scanOptionSyLabel);
-        var scanOptionSzCol = document.createElement('div');
-        scanOptionSzCol.setAttribute('class','col-1');
-          var scanOptionSzToggle = toggle.cloneNode();
-          scanOptionSzToggle.setAttribute('id',`${target.ip}-scan-option-sz`);
-          var scanOptionSzLabel = formCheckLabel.cloneNode();
-          scanOptionSzLabel.setAttribute('for',`${target.ip}-scan-option-sz`);
-          scanOptionSzLabel.textContent = 'sZ';
-        scanOptionSzCol.appendChild(scanOptionSzToggle);
-        scanOptionSzCol.appendChild(scanOptionSzLabel);
-        var scanOptionScCol = document.createElement('div');
-        scanOptionScCol.setAttribute('class','col-1');
-          var scanOptionScToggle = toggle.cloneNode();
-          scanOptionScToggle.setAttribute('id',`${target.ip}-scan-option-sc`);
-          var scanOptionScLabel = formCheckLabel.cloneNode();
-          scanOptionScLabel.setAttribute('for',`${target.ip}-scan-option-sc`);
-          scanOptionScLabel.textContent = 'sC';
-        scanOptionScCol.appendChild(scanOptionScToggle);
-        scanOptionScCol.appendChild(scanOptionScLabel);
-        var scanOptionSvCol = document.createElement('div');
-        scanOptionSvCol.setAttribute('class','col-1');
-          var scanOptionSvToggle = toggle.cloneNode();
-          scanOptionSvToggle.setAttribute('id',`${target.ip}-scan-option-sv`);
-          var scanOptionSvLabel = formCheckLabel.cloneNode();
-          scanOptionSvLabel.setAttribute('for',`${target.ip}-scan-option-sv`);
-          scanOptionSvLabel.textContent = 'sV';
-        scanOptionSvCol.appendChild(scanOptionSvToggle);
-        scanOptionSvCol.appendChild(scanOptionSvLabel);
-        var scanOptionOCol = document.createElement('div');
-        scanOptionOCol.setAttribute('class','col-1');
-          var scanOptionOToggle = toggle.cloneNode();
-          scanOptionOToggle.setAttribute('id',`${target.ip}-scan-option-o`);
-          var scanOptionOLabel = formCheckLabel.cloneNode();
-          scanOptionOLabel.setAttribute('for',`${target.ip}-scan-option-o`);
-          scanOptionOLabel.textContent = 'O';
-        scanOptionOCol.appendChild(scanOptionOToggle);
-        scanOptionOCol.appendChild(scanOptionOLabel);
+      scanRow.appendChild(scanModeCol);
+
+        var scanOptionsCol = document.createElement('div');
+        scanOptionsCol.setAttribute('class','col d-flex justify-content-center');
+          var scanOptionsRow = document.createElement('div');
+          scanOptionsRow.setAttribute('class', 'row align-items-center flex-nowrap');
+
+            var scanOptionSyCol = document.createElement('div');
+            scanOptionSyCol.setAttribute('class','col');
+              var scanOptionSyToggle = toggle.cloneNode();
+              scanOptionSyToggle.classList.add('m-1');
+              scanOptionSyToggle.setAttribute('id',`${target.ip}-scan-option-sy`);
+            scanOptionSyCol.appendChild(scanOptionSyToggle);
+              var scanOptionSyLabel = formCheckLabel.cloneNode();
+              scanOptionSyLabel.classList.add('m-1');
+              scanOptionSyLabel.setAttribute('for',`${target.ip}-scan-option-sy`);
+              scanOptionSyLabel.textContent = 'sY';
+            scanOptionSyCol.appendChild(scanOptionSyLabel);
+          scanOptionsRow.appendChild(scanOptionSyCol);
+
+            var scanOptionSzCol = document.createElement('div');
+            scanOptionSzCol.setAttribute('class','col');
+              var scanOptionSzToggle = toggle.cloneNode();
+              scanOptionSzToggle.classList.add('m-1');
+              scanOptionSzToggle.setAttribute('id',`${target.ip}-scan-option-sz`);
+            scanOptionSzCol.appendChild(scanOptionSzToggle);
+              var scanOptionSzLabel = formCheckLabel.cloneNode();
+              scanOptionSzLabel.classList.add('m-1');
+              scanOptionSzLabel.setAttribute('for',`${target.ip}-scan-option-sz`);
+              scanOptionSzLabel.textContent = 'sZ';
+            scanOptionSzCol.appendChild(scanOptionSzLabel);
+          scanOptionsRow.appendChild(scanOptionSzCol);
+
+            var scanOptionScCol = document.createElement('div');
+            scanOptionScCol.setAttribute('class','col');
+              var scanOptionScToggle = toggle.cloneNode();
+              scanOptionScToggle.classList.add('m-1');
+              scanOptionScToggle.setAttribute('id',`${target.ip}-scan-option-sc`);
+            scanOptionScCol.appendChild(scanOptionScToggle);
+              var scanOptionScLabel = formCheckLabel.cloneNode();
+              scanOptionScLabel.classList.add('m-1');
+              scanOptionScLabel.setAttribute('for',`${target.ip}-scan-option-sc`);
+              scanOptionScLabel.textContent = 'sC';
+            scanOptionScCol.appendChild(scanOptionScLabel);
+          scanOptionsRow.appendChild(scanOptionScCol);
+
+            var scanOptionSvCol = document.createElement('div');
+            scanOptionSvCol.setAttribute('class','col');
+              var scanOptionSvToggle = toggle.cloneNode();
+              scanOptionSvToggle.classList.add('m-1');
+              scanOptionSvToggle.setAttribute('id',`${target.ip}-scan-option-sv`);
+            scanOptionSvCol.appendChild(scanOptionSvToggle);
+              var scanOptionSvLabel = formCheckLabel.cloneNode();
+              scanOptionSvLabel.classList.add('m-1');
+              scanOptionSvLabel.setAttribute('for',`${target.ip}-scan-option-sv`);
+              scanOptionSvLabel.textContent = 'sV';
+            scanOptionSvCol.appendChild(scanOptionSvLabel);
+          scanOptionsRow.appendChild(scanOptionSvCol);
+
+            var scanOptionOCol = document.createElement('div');
+            scanOptionOCol.setAttribute('class','col');
+              var scanOptionOToggle = toggle.cloneNode();
+              scanOptionOToggle.classList.add('m-1');
+              scanOptionOToggle.setAttribute('id',`${target.ip}-scan-option-o`);
+            scanOptionOCol.appendChild(scanOptionOToggle);
+              var scanOptionOLabel = formCheckLabel.cloneNode();
+              scanOptionOLabel.classList.add('m-1');
+              scanOptionOLabel.setAttribute('for',`${target.ip}-scan-option-o`);
+              scanOptionOLabel.textContent = 'O';
+            scanOptionOCol.appendChild(scanOptionOLabel);
+          scanOptionsRow.appendChild(scanOptionOCol);
+        scanOptionsCol.appendChild(scanOptionsRow);
+      scanRow.appendChild(scanOptionsCol);
+
         var scanButtonCol = document.createElement('div');
-        scanButtonCol.setAttribute('class','col-1');
+        scanButtonCol.setAttribute('class','col-3 d-flex justify-content-center');
           var scanButton = button.cloneNode();
           scanButton.setAttribute('id',`${target.ip}-scan-button`);
           scanButton.textContent='scan';
@@ -1160,15 +1232,9 @@
             });
           });
         scanButtonCol.appendChild(scanButton);
-      scanRow.appendChild(scanModeCol);
-      scanRow.appendChild(scanOptionSyCol);
-      scanRow.appendChild(scanOptionSzCol);
-      scanRow.appendChild(scanOptionScCol);
-      scanRow.appendChild(scanOptionSvCol);
-      scanRow.appendChild(scanOptionOCol);
       scanRow.appendChild(scanButtonCol);
 
-    panel.appendChild(title);
+    panel.appendChild(titleRow);
     panel.appendChild(writerDiv);
     panel.appendChild(hr.cloneNode());
     interfaceDivs.forEach(interfaceDiv => panel.appendChild(interfaceDiv));
@@ -1237,7 +1303,7 @@
       }
       if(document.getElementById(`${id}-duration-random-toggle`).checked){
         var range = document.getElementById(`${id}-duration-range`);
-        range.value = Math.round(randomRange(2,8164));
+        range.value = Math.round(randomRange(2,1400));
         range.dispatchEvent(new Event('input'));
       }
       if(document.getElementById(`${id}-frequency-random-toggle`).checked){
@@ -1282,6 +1348,7 @@
       .addEventListener('click', async (e) => {
         try{
           targetList = null;
+          var textContent = e.target.textContent;
           e.target.textContent = 'working';
           e.target.disabled = true;
           const network = document.getElementById('networks-select').value;
@@ -1291,13 +1358,27 @@
           var parent = document.getElementById('target-panels');
           targetList = await networkScan(network);
           
-          if (!targetList){
+          if (!targetList || targetList.length == 0){
             parent.hidden = true;
           } else {
 
             while (parent.hasChildNodes()){
               parent.firstChild.remove();
             }
+
+            console.log('targetList',targetList)
+            targetList.sort((a, b) => {
+              const nameA = a.state.hostname; // ignore upper and lowercase
+              const nameB = b.state.hostname; // ignore upper and lowercase
+              if (nameA < nameB) {
+                return -1;
+              }
+              
+              if (nameA > nameB) {
+                return 1;
+              }
+              return 0;
+            });
 
             let panel = null;
             for(var i = 0; i < targetList.length; i++){
@@ -1317,7 +1398,7 @@
         } catch (error) {
           console.error(error);
         } finally {
-          e.target.textContent = 'targets';
+          e.target.textContent = textContent;
           e.target.disabled = false;
         }
     });

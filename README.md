@@ -296,7 +296,7 @@ net.ipv4.ip_forward=1
 1. Setup packet routing:
 
 ```
-sudo iptables -t nat -A POSTROUTING -o <OUTOUT_INTERFACE> -j MASQUERADE
+sudo iptables -t nat -A POSTROUTING -j MASQUERADE
 sudo netfilter-persistent save
 ```
 

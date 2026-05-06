@@ -211,7 +211,7 @@ def threadedScan(ip, concurrent=128):
     t.start()
   network = '.'.join(ip.split('.')[:3])
   if ip.split('.')[0] == '127':
-    return { 'targets' : targets }
+    return targets
   
   try:
     for i in range(255):
@@ -471,7 +471,7 @@ def stop_ap(parameters):
 
 def loadAPs():
   parser = configparser.ConfigParser()
-  parser.read('access_points.conf')
+  parser.read(os.path.join(path, 'accesspoints.conf'))
 
   return [
     {key: value for key, value in parser.items(section)}
